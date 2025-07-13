@@ -2,8 +2,6 @@
 
 A modern, feature-rich color manipulation tool for designers and developers. Create, modify, and experiment with colors in real-time.
 
-![Color Studio Screenshot](screenshot.png)
-
 ## Features
 
 - **Color Input Methods**
