@@ -1,0 +1,22 @@
+{
+  "name": "color-studio",
+  "version": "1.0.0",
+  "description": "A powerful color manipulation tool for designers and developers",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "watch": "webpack -w --mode development",
+    "build": "webpack --mode production"
+  },
+  "dependencies": {
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.22.5",
+    "@babel/preset-env": "^7.22.5",
+    "babel-loader": "^9.1.2",
+    "css-loader": "^6.8.1",
+    "style-loader": "^3.3.3"
+  }
+}

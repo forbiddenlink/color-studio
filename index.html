@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+        <link rel="stylesheet" href="index.css">
+        <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700" rel="stylesheet" />
+        <title>Color Studio</title>
+    </head>
+    <body>
+        <div class="container">
+            <h1 class="title">Color Studio</h1>
+            
+            <div class="color-input-section">
+                <div class="input-group">
+                    <div class="color-formats">
+                        <label for="hex">Color Input</label>
+                        <div class="format-inputs">
+                            <div class="input-with-label">
+                                <input type="color" id="colorPicker" value="#c6d5ac">
+                                <input type="text" name="hex" id="hexInput" placeholder="#000000" value="#c6d5ac"/>
+                                <span class="format-label">HEX</span>
+                            </div>
+                            <button id="applyButton" class="button button--success">Apply Color</button>
+                            <button id="copyButton" class="button button--primary">Copy Color</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="color-presets">
+                    <h3>Quick Colors</h3>
+                    <div class="preset-grid">
+                        <button class="preset-color" style="background-color: #ff0000" data-color="#ff0000" title="Red"></button>
+                        <button class="preset-color" style="background-color: #00ff00" data-color="#00ff00" title="Green"></button>
+                        <button class="preset-color" style="background-color: #0000ff" data-color="#0000ff" title="Blue"></button>
+                        <button class="preset-color" style="background-color: #ffff00" data-color="#ffff00" title="Yellow"></button>
+                        <button class="preset-color" style="background-color: #ff00ff" data-color="#ff00ff" title="Magenta"></button>
+                        <button class="preset-color" style="background-color: #00ffff" data-color="#00ffff" title="Cyan"></button>
+                        <button class="preset-color" style="background-color: #ffffff" data-color="#ffffff" title="White"></button>
+                        <button class="preset-color" style="background-color: #000000" data-color="#000000" title="Black"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-section">
+                <!-- Brightness Control -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Brightness</h3>
+                        <div class="toggle">
+                            <p id="lightenText" class="toggle-text">Lighten</p>
+                            <div id="toggleBtn" class="toggle-btn">
+                                <div class="inner-circle"></div>
+                            </div>
+                            <p id="darkenText" class="toggle-text unselected">Darken</p>
+                        </div>
+                    </div>
+                    <label for="slider" id="sliderText" class="slider-label">Brightness: 0%</label>
+                    <input type="range" min="0" max="100" value="0" class="slider" id="slider" name="slider">
+                </div>
+
+                <!-- Saturation Control -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Saturation</h3>
+                        <div class="tooltip" title="Adjust color intensity">ⓘ</div>
+                    </div>
+                    <label for="saturationSlider" id="saturationText" class="slider-label">Saturation: 0%</label>
+                    <input type="range" min="-100" max="100" value="0" class="slider" id="saturationSlider" name="saturationSlider">
+                </div>
+
+                <!-- Hue Control -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>Hue</h3>
+                        <div class="tooltip" title="Shift the base color">ⓘ</div>
+                    </div>
+                    <label for="hueSlider" id="hueText" class="slider-label">Hue: 0°</label>
+                    <input type="range" min="0" max="360" value="0" class="slider" id="hueSlider" name="hueSlider">
+                </div>
+            </div>
+
+            <div class="color-display">
+                <div class="color-box">
+                    <div class="color-info">
+                        <h3>Original Color</h3>
+                        <span id="colorName" class="color-name"></span>
+                    </div>
+                    <div id="inputColor" class="box"></div>
+                    <div class="color-values">
+                        <span id="inputColorHex"></span>
+                        <span id="inputColorRgb"></span>
+                        <span id="inputColorHsl"></span>
+                    </div>
+                </div>
+                <div class="color-box">
+                    <div class="color-info">
+                        <h3>Modified Color</h3>
+                        <span id="modifiedColorName" class="color-name"></span>
+                    </div>
+                    <div id="alteredColor" class="box"></div>
+                    <div class="color-values">
+                        <span id="alteredColorHex"></span>
+                        <span id="alteredColorRgb"></span>
+                        <span id="alteredColorHsl"></span>
+                        <span id="alteredColorText" class="contrast-ratio"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="additional-tools">
+                <div class="tool-section">
+                    <h3>Color Schemes</h3>
+                    <div class="scheme-buttons">
+                        <button id="complementaryBtn" class="button button--primary">Complementary</button>
+                        <button id="analogousBtn" class="button button--primary">Analogous</button>
+                        <button id="triadicBtn" class="button button--primary">Triadic</button>
+                    </div>
+                    <div id="schemeColors" class="scheme-colors"></div>
+                </div>
+                
+                <div class="tool-section">
+                    <h3>Export</h3>
+                    <div class="export-buttons">
+                        <button id="exportCss" class="button button--primary">Copy CSS</button>
+                        <button id="exportScss" class="button button--primary">Copy SCSS</button>
+                        <button id="exportJson" class="button button--primary">Copy JSON</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="color-history">
+                <div class="section-header">
+                    <h3>Recent Colors</h3>
+                    <button id="clearHistory" class="button">Clear History</button>
+                </div>
+                <div id="colorHistory" class="history-container"></div>
+            </div>
+        </div>
+        
+        <script src="index.js"></script>
+    </body>
+</html>
