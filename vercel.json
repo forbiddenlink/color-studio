@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build && cp index.html index.css robots.txt sitemap.xml favicon.svg og-image.svg dist/",
+  "buildCommand": "npm run build && cp index.html index.css robots.txt sitemap.xml favicon.svg og-image.svg manifest.json service-worker.js dist/",
   "outputDirectory": "dist",
   "headers": [
     {
