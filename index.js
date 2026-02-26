@@ -30,6 +30,9 @@ const clearHistoryBtn = document.getElementById('clearHistory');
 const complementaryBtn = document.getElementById('complementaryBtn');
 const analogousBtn = document.getElementById('analogousBtn');
 const triadicBtn = document.getElementById('triadicBtn');
+const splitComplementaryBtn = document.getElementById('splitComplementaryBtn');
+const squareBtn = document.getElementById('squareBtn');
+const compoundBtn = document.getElementById('compoundBtn');
 const schemeColors = document.getElementById('schemeColors');
 const exportCssBtn = document.getElementById('exportCss');
 const exportScssBtn = document.getElementById('exportScss');
@@ -2264,6 +2267,33 @@ function getTriadicColors(hsl) {
     });
 }
 
+// Split-complementary: base + two colors adjacent to the complement (150° and 210° from base)
+function getSplitComplementaryColors(hsl) {
+    const hues = [(hsl.h + 150) % 360, (hsl.h + 210) % 360];
+    return hues.map(h => {
+        const rgb = hslToRGB(h, hsl.s, hsl.l);
+        return convertRGBToHex(rgb.r, rgb.g, rgb.b);
+    });
+}
+
+// Square: four colors evenly spaced (90° apart)
+function getSquareColors(hsl) {
+    const hues = [(hsl.h + 90) % 360, (hsl.h + 180) % 360, (hsl.h + 270) % 360];
+    return hues.map(h => {
+        const rgb = hslToRGB(h, hsl.s, hsl.l);
+        return convertRGBToHex(rgb.r, rgb.g, rgb.b);
+    });
+}
+
+// Compound (double-complementary): two pairs of complementary colors (base, base+30, complement, complement+30)
+function getCompoundColors(hsl) {
+    const hues = [(hsl.h + 30) % 360, (hsl.h + 180) % 360, (hsl.h + 210) % 360];
+    return hues.map(h => {
+        const rgb = hslToRGB(h, hsl.s, hsl.l);
+        return convertRGBToHex(rgb.r, rgb.g, rgb.b);
+    });
+}
+
 function displayColorScheme(colors) {
     schemeColors.innerHTML = '';
     colors.forEach(color => {
@@ -2526,6 +2556,21 @@ triadicBtn.addEventListener('click', () => {
     displayColorScheme([currentColor.hex, ...triadic]);
 });
 
+splitComplementaryBtn.addEventListener('click', () => {
+    const splitComp = getSplitComplementaryColors(currentColor.hsl);
+    displayColorScheme([currentColor.hex, ...splitComp]);
+});
+
+squareBtn.addEventListener('click', () => {
+    const square = getSquareColors(currentColor.hsl);
+    displayColorScheme([currentColor.hex, ...square]);
+});
+
+compoundBtn.addEventListener('click', () => {
+    const compound = getCompoundColors(currentColor.hsl);
+    displayColorScheme([currentColor.hex, ...compound]);
+});
+
 // Export Buttons
 exportCssBtn.addEventListener('click', (e) => {
     const css = generateCssExport();
@@ -2551,6 +2596,152 @@ if (exportTailwindBtn) {
     });
 }
 
+// shadcn/ui Export Button
+const exportShadcnBtn = document.getElementById('exportShadcn');
+if (exportShadcnBtn) {
+    exportShadcnBtn.addEventListener('click', (e) => {
+        const shadcn = generateShadcnExport();
+        copyToClipboard(shadcn, 'Copied!', e.target);
+    });
+}
+
+// DaisyUI Export Button
+const exportDaisyuiBtn = document.getElementById('exportDaisyui');
+if (exportDaisyuiBtn) {
+    exportDaisyuiBtn.addEventListener('click', (e) => {
+        const daisyui = generateDaisyUIExport();
+        copyToClipboard(daisyui, 'Copied!', e.target);
+    });
+}
+
+// Bootstrap Export Button
+const exportBootstrapBtn = document.getElementById('exportBootstrap');
+if (exportBootstrapBtn) {
+    exportBootstrapBtn.addEventListener('click', (e) => {
+        const bootstrap = generateBootstrapExport();
+        copyToClipboard(bootstrap, 'Copied!', e.target);
+    });
+}
+
+// ==========================================
+// GRADIENT GENERATOR
+// ==========================================
+
+// Gradient state
+let gradientState = {
+    type: 'linear', // 'linear' or 'radial'
+    angle: 90
+};
+
+// Get gradient colors from current state
+function getGradientColors() {
+    // Get scheme colors if available
+    const schemeColorsEl = document.getElementById('schemeColors');
+    const schemeColorDivs = schemeColorsEl ? schemeColorsEl.querySelectorAll('.history-color') : [];
+
+    if (schemeColorDivs.length >= 2) {
+        // Use first and last scheme colors for gradient
+        const colors = Array.from(schemeColorDivs).map(div => {
+            const bgColor = div.style.backgroundColor;
+            return rgbToHex(bgColor);
+        });
+        return colors;
+    }
+
+    // Fall back to current color and modified color
+    const baseColor = currentColor.hex;
+    const modifiedColor = rgbToHex(alteredColor.style.backgroundColor);
+
+    return [baseColor, modifiedColor];
+}
+
+// Generate gradient CSS string
+function generateGradientCSS() {
+    const colors = getGradientColors();
+    const colorStops = colors.join(', ');
+
+    if (gradientState.type === 'linear') {
+        return `linear-gradient(${gradientState.angle}deg, ${colorStops})`;
+    } else {
+        return `radial-gradient(circle, ${colorStops})`;
+    }
+}
+
+// Update gradient preview and code display
+function updateGradientPreview() {
+    const gradientPreview = document.getElementById('gradientPreview');
+    const gradientCode = document.getElementById('gradientCode');
+
+    if (!gradientPreview || !gradientCode) return;
+
+    const gradientCSS = generateGradientCSS();
+    gradientPreview.style.background = gradientCSS;
+    gradientCode.textContent = gradientCSS;
+}
+
+// Initialize gradient generator
+function initGradientGenerator() {
+    const linearBtn = document.getElementById('linearGradientBtn');
+    const radialBtn = document.getElementById('radialGradientBtn');
+    const angleSlider = document.getElementById('gradientAngle');
+    const angleText = document.getElementById('gradientAngleText');
+    const angleControl = document.getElementById('gradientAngleControl');
+    const copyGradientBtn = document.getElementById('copyGradientBtn');
+
+    if (!linearBtn || !radialBtn || !angleSlider) return;
+
+    // Type toggle buttons
+    linearBtn.addEventListener('click', () => {
+        gradientState.type = 'linear';
+        linearBtn.classList.add('active');
+        radialBtn.classList.remove('active');
+        if (angleControl) angleControl.classList.remove('hidden');
+        updateGradientPreview();
+    });
+
+    radialBtn.addEventListener('click', () => {
+        gradientState.type = 'radial';
+        radialBtn.classList.add('active');
+        linearBtn.classList.remove('active');
+        if (angleControl) angleControl.classList.add('hidden');
+        updateGradientPreview();
+    });
+
+    // Angle slider
+    angleSlider.addEventListener('input', () => {
+        gradientState.angle = parseInt(angleSlider.value);
+        if (angleText) {
+            angleText.textContent = `Angle: ${gradientState.angle}deg`;
+        }
+        updateGradientPreview();
+    });
+
+    // Copy button
+    if (copyGradientBtn) {
+        copyGradientBtn.addEventListener('click', (e) => {
+            const gradientCSS = generateGradientCSS();
+            copyToClipboard(gradientCSS, 'Copied!', e.target);
+        });
+    }
+
+    // Initial preview
+    updateGradientPreview();
+}
+
+// Hook gradient update to color changes
+const originalUpdateOutputColor = updateOutputColor;
+updateOutputColor = function() {
+    originalUpdateOutputColor.apply(this, arguments);
+    updateGradientPreview();
+};
+
+// Hook gradient update to scheme color changes
+const originalDisplayColorScheme = displayColorScheme;
+displayColorScheme = function(colors) {
+    originalDisplayColorScheme.apply(this, arguments);
+    updateGradientPreview();
+};
+
 // Random Palette Button
 const randomPaletteBtn = document.getElementById('randomPaletteBtn');
 if (randomPaletteBtn) {
@@ -2572,6 +2763,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize keyboard shortcuts
     initKeyboardShortcuts();
+
+    // Initialize gradient generator
+    initGradientGenerator();
 });
 
 // ==========================================
@@ -2818,6 +3012,304 @@ function generateColorScale(hex) {
     }
 
     return shades;
+}
+
+// ==========================================
+// FEATURE: shadcn/ui Export
+// ==========================================
+function generateShadcnExport() {
+    const modifiedHex = rgbToHex(alteredColor.style.backgroundColor);
+
+    // Get scheme colors from DOM if available
+    const schemeColorElements = document.querySelectorAll('#schemeColors .history-color');
+    const schemeColors = [];
+    schemeColorElements.forEach(el => {
+        const hex = el.dataset.originalHex || rgbToHex(el.style.backgroundColor);
+        schemeColors.push(hex);
+    });
+
+    // Generate HSL values for shadcn format (without deg/%)
+    const baseHsl = currentColor.hsl;
+    const modifiedRgb = hexToRGB(modifiedHex);
+    const modifiedHsl = rgbToHSL(modifiedRgb.r, modifiedRgb.g, modifiedRgb.b);
+
+    // Use scheme colors for secondary/accent if available, otherwise derive from base
+    let secondaryHex = schemeColors[1] || generateDerivedColor(currentColor.hex, 30, -10, 5);
+    let accentHex = schemeColors[2] || generateDerivedColor(currentColor.hex, 60, 5, -5);
+
+    const secondaryRgb = hexToRGB(secondaryHex);
+    const secondaryHsl = rgbToHSL(secondaryRgb.r, secondaryRgb.g, secondaryRgb.b);
+
+    const accentRgb = hexToRGB(accentHex);
+    const accentHsl = rgbToHSL(accentRgb.r, accentRgb.g, accentRgb.b);
+
+    // Generate foreground colors (contrasting)
+    const primaryFgHsl = baseHsl.l > 50 ? { h: baseHsl.h, s: baseHsl.s, l: 10 } : { h: baseHsl.h, s: baseHsl.s, l: 98 };
+    const secondaryFgHsl = secondaryHsl.l > 50 ? { h: secondaryHsl.h, s: secondaryHsl.s, l: 10 } : { h: secondaryHsl.h, s: secondaryHsl.s, l: 98 };
+    const accentFgHsl = accentHsl.l > 50 ? { h: accentHsl.h, s: accentHsl.s, l: 10 } : { h: accentHsl.h, s: accentHsl.s, l: 98 };
+
+    // Background and foreground
+    const bgHsl = { h: baseHsl.h, s: Math.max(baseHsl.s - 30, 5), l: 98 };
+    const fgHsl = { h: baseHsl.h, s: Math.max(baseHsl.s - 30, 5), l: 4 };
+
+    // Card, popover, muted colors
+    const cardHsl = { h: baseHsl.h, s: Math.max(baseHsl.s - 25, 5), l: 100 };
+    const mutedHsl = { h: baseHsl.h, s: Math.max(baseHsl.s - 20, 5), l: 96 };
+    const mutedFgHsl = { h: baseHsl.h, s: Math.max(baseHsl.s - 30, 5), l: 45 };
+
+    // Border and input colors
+    const borderHsl = { h: baseHsl.h, s: Math.max(baseHsl.s - 25, 5), l: 90 };
+    const inputHsl = { h: baseHsl.h, s: Math.max(baseHsl.s - 25, 5), l: 90 };
+    const ringHsl = { h: baseHsl.h, s: baseHsl.s, l: baseHsl.l };
+
+    // Destructive color (red-based)
+    const destructiveHsl = { h: 0, s: 84, l: 60 };
+    const destructiveFgHsl = { h: 0, s: 0, l: 98 };
+
+    return `/* shadcn/ui CSS Variables */
+/* Add to your globals.css */
+
+@layer base {
+  :root {
+    --background: ${bgHsl.h} ${bgHsl.s}% ${bgHsl.l}%;
+    --foreground: ${fgHsl.h} ${fgHsl.s}% ${fgHsl.l}%;
+
+    --card: ${cardHsl.h} ${cardHsl.s}% ${cardHsl.l}%;
+    --card-foreground: ${fgHsl.h} ${fgHsl.s}% ${fgHsl.l}%;
+
+    --popover: ${cardHsl.h} ${cardHsl.s}% ${cardHsl.l}%;
+    --popover-foreground: ${fgHsl.h} ${fgHsl.s}% ${fgHsl.l}%;
+
+    --primary: ${baseHsl.h} ${baseHsl.s}% ${baseHsl.l}%;
+    --primary-foreground: ${primaryFgHsl.h} ${primaryFgHsl.s}% ${primaryFgHsl.l}%;
+
+    --secondary: ${secondaryHsl.h} ${secondaryHsl.s}% ${secondaryHsl.l}%;
+    --secondary-foreground: ${secondaryFgHsl.h} ${secondaryFgHsl.s}% ${secondaryFgHsl.l}%;
+
+    --muted: ${mutedHsl.h} ${mutedHsl.s}% ${mutedHsl.l}%;
+    --muted-foreground: ${mutedFgHsl.h} ${mutedFgHsl.s}% ${mutedFgHsl.l}%;
+
+    --accent: ${accentHsl.h} ${accentHsl.s}% ${accentHsl.l}%;
+    --accent-foreground: ${accentFgHsl.h} ${accentFgHsl.s}% ${accentFgHsl.l}%;
+
+    --destructive: ${destructiveHsl.h} ${destructiveHsl.s}% ${destructiveHsl.l}%;
+    --destructive-foreground: ${destructiveFgHsl.h} ${destructiveFgHsl.s}% ${destructiveFgHsl.l}%;
+
+    --border: ${borderHsl.h} ${borderHsl.s}% ${borderHsl.l}%;
+    --input: ${inputHsl.h} ${inputHsl.s}% ${inputHsl.l}%;
+    --ring: ${ringHsl.h} ${ringHsl.s}% ${ringHsl.l}%;
+
+    --radius: 0.5rem;
+  }
+}`;
+}
+
+// ==========================================
+// FEATURE: DaisyUI Export
+// ==========================================
+function generateDaisyUIExport() {
+    const modifiedHex = rgbToHex(alteredColor.style.backgroundColor);
+
+    // Get scheme colors from DOM if available
+    const schemeColorElements = document.querySelectorAll('#schemeColors .history-color');
+    const schemeColors = [];
+    schemeColorElements.forEach(el => {
+        const hex = el.dataset.originalHex || rgbToHex(el.style.backgroundColor);
+        schemeColors.push(hex);
+    });
+
+    // Primary is the current color
+    const primaryHex = currentColor.hex;
+
+    // Secondary and accent from scheme or derived
+    const secondaryHex = schemeColors[1] || generateDerivedColor(currentColor.hex, 30, -10, 5);
+    const accentHex = schemeColors[2] || generateDerivedColor(currentColor.hex, 180, 10, 0);
+
+    // Neutral colors (desaturated, darker version)
+    const neutralHex = generateDerivedColor(currentColor.hex, 0, -40, -30);
+
+    // Base colors for content backgrounds
+    const baseHsl = currentColor.hsl;
+    const base100Hex = hslToHex(baseHsl.h, Math.max(baseHsl.s - 30, 5), 98);
+    const base200Hex = hslToHex(baseHsl.h, Math.max(baseHsl.s - 30, 5), 94);
+    const base300Hex = hslToHex(baseHsl.h, Math.max(baseHsl.s - 30, 5), 88);
+    const baseContentHex = hslToHex(baseHsl.h, Math.max(baseHsl.s - 30, 5), 15);
+
+    // State colors
+    const infoHex = '#3ABFF8';
+    const successHex = '#36D399';
+    const warningHex = '#FBBD23';
+    const errorHex = '#F87272';
+
+    return `/* DaisyUI Theme Configuration */
+/* Add to your tailwind.config.js */
+
+module.exports = {
+  daisyui: {
+    themes: [
+      {
+        "color-studio": {
+          "primary": "${primaryHex}",
+          "primary-content": "${getContrastColor(primaryHex)}",
+
+          "secondary": "${secondaryHex}",
+          "secondary-content": "${getContrastColor(secondaryHex)}",
+
+          "accent": "${accentHex}",
+          "accent-content": "${getContrastColor(accentHex)}",
+
+          "neutral": "${neutralHex}",
+          "neutral-content": "${getContrastColor(neutralHex)}",
+
+          "base-100": "${base100Hex}",
+          "base-200": "${base200Hex}",
+          "base-300": "${base300Hex}",
+          "base-content": "${baseContentHex}",
+
+          "info": "${infoHex}",
+          "info-content": "${getContrastColor(infoHex)}",
+
+          "success": "${successHex}",
+          "success-content": "${getContrastColor(successHex)}",
+
+          "warning": "${warningHex}",
+          "warning-content": "${getContrastColor(warningHex)}",
+
+          "error": "${errorHex}",
+          "error-content": "${getContrastColor(errorHex)}",
+        },
+      },
+    ],
+  },
+}`;
+}
+
+// ==========================================
+// FEATURE: Bootstrap Export
+// ==========================================
+function generateBootstrapExport() {
+    const modifiedHex = rgbToHex(alteredColor.style.backgroundColor);
+
+    // Get scheme colors from DOM if available
+    const schemeColorElements = document.querySelectorAll('#schemeColors .history-color');
+    const schemeColors = [];
+    schemeColorElements.forEach(el => {
+        const hex = el.dataset.originalHex || rgbToHex(el.style.backgroundColor);
+        schemeColors.push(hex);
+    });
+
+    // Primary is the current color
+    const primaryHex = currentColor.hex;
+
+    // Secondary from scheme or derived (typically a gray/neutral)
+    const secondaryHex = schemeColors[1] || generateDerivedColor(currentColor.hex, 0, -50, 20);
+
+    // Generate full shade scale for primary
+    const shades = generateColorScale(primaryHex);
+
+    // Derive other Bootstrap colors
+    const baseHsl = currentColor.hsl;
+
+    // Success (green-based, can be influenced by primary hue)
+    const successHex = '#198754';
+
+    // Info (cyan-based)
+    const infoHex = '#0dcaf0';
+
+    // Warning (yellow-based)
+    const warningHex = '#ffc107';
+
+    // Danger (red-based)
+    const dangerHex = '#dc3545';
+
+    // Light and dark
+    const lightHex = hslToHex(baseHsl.h, Math.max(baseHsl.s - 30, 5), 98);
+    const darkHex = hslToHex(baseHsl.h, Math.max(baseHsl.s - 30, 10), 15);
+
+    // Body colors
+    const bodyBgHex = '#ffffff';
+    const bodyColorHex = '#212529';
+
+    // Link color (often same as primary)
+    const linkColorHex = primaryHex;
+
+    return `// Bootstrap SCSS Variables
+// Add to your _variables.scss or before importing Bootstrap
+
+// Theme Colors
+$primary: ${primaryHex};
+$secondary: ${secondaryHex};
+$success: ${successHex};
+$info: ${infoHex};
+$warning: ${warningHex};
+$danger: ${dangerHex};
+$light: ${lightHex};
+$dark: ${darkHex};
+
+// Primary color shades (for utilities)
+$primary-100: ${shades[100]};
+$primary-200: ${shades[200]};
+$primary-300: ${shades[300]};
+$primary-400: ${shades[400]};
+$primary-500: ${shades[500]};
+$primary-600: ${shades[600]};
+$primary-700: ${shades[700]};
+$primary-800: ${shades[800]};
+$primary-900: ${shades[900]};
+
+// Body
+$body-bg: ${bodyBgHex};
+$body-color: ${bodyColorHex};
+
+// Links
+$link-color: ${linkColorHex};
+$link-hover-color: ${shades[700]};
+
+// Border
+$border-color: ${hslToHex(baseHsl.h, Math.max(baseHsl.s - 30, 5), 88)};
+
+// Component colors (derived from primary)
+$component-active-bg: $primary;
+$component-active-color: ${getContrastColor(primaryHex)};
+
+// Theme colors map (optional override)
+$theme-colors: (
+  "primary": $primary,
+  "secondary": $secondary,
+  "success": $success,
+  "info": $info,
+  "warning": $warning,
+  "danger": $danger,
+  "light": $light,
+  "dark": $dark
+);`;
+}
+
+// Helper function to generate a derived color from base
+function generateDerivedColor(hex, hueShift, satShift, lightShift) {
+    const rgb = hexToRGB(hex);
+    const hsl = rgbToHSL(rgb.r, rgb.g, rgb.b);
+
+    const newH = (hsl.h + hueShift + 360) % 360;
+    const newS = Math.max(0, Math.min(100, hsl.s + satShift));
+    const newL = Math.max(0, Math.min(100, hsl.l + lightShift));
+
+    const newRgb = hslToRGB(newH, newS, newL);
+    return convertRGBToHex(newRgb.r, newRgb.g, newRgb.b);
+}
+
+// Helper function to convert HSL to hex
+function hslToHex(h, s, l) {
+    const rgb = hslToRGB(h, s, l);
+    return convertRGBToHex(rgb.r, rgb.g, rgb.b);
+}
+
+// Helper function to get contrasting text color
+function getContrastColor(hex) {
+    const rgb = hexToRGB(hex);
+    // Calculate relative luminance
+    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+    return luminance > 0.5 ? '#000000' : '#ffffff';
 }
 
 // Validation Functions
@@ -3530,4 +4022,47 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Palette loaded from shared link');
     }
 });
+
+// =============================================================================
+// SERVICE WORKER REGISTRATION (PWA Support)
+// =============================================================================
+
+/**
+ * Register service worker for PWA functionality
+ * Enables offline support and app installation
+ */
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then((registration) => {
+                    console.log('[PWA] Service Worker registered:', registration.scope);
+
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New content available, show update notification
+                                    showToast('New version available! Refresh to update.');
+                                }
+                            });
+                        }
+                    });
+                })
+                .catch((error) => {
+                    console.error('[PWA] Service Worker registration failed:', error);
+                });
+        });
+
+        // Handle controller change (when new service worker takes over)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('[PWA] New service worker activated');
+        });
+    }
+}
+
+// Initialize PWA
+registerServiceWorker();
 

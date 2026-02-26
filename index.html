@@ -4,27 +4,37 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Color Studio - Professional Color Manipulation Tool for Designers</title>
-        <meta name="description" content="A powerful color manipulation tool for designers and developers. Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, and Tailwind.">
+        <meta name="description" content="A powerful color manipulation tool for designers and developers. Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, Tailwind, shadcn/ui, DaisyUI, and Bootstrap.">
         <link rel="canonical" href="https://color-studio.vercel.app/">
 
         <!-- Open Graph -->
         <meta property="og:type" content="website">
         <meta property="og:title" content="Color Studio - Professional Color Manipulation Tool">
-        <meta property="og:description" content="Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, and Tailwind.">
+        <meta property="og:description" content="Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, Tailwind, shadcn/ui, DaisyUI, and Bootstrap.">
         <meta property="og:image" content="https://color-studio.vercel.app/og-image.svg">
         <meta property="og:url" content="https://color-studio.vercel.app/">
 
         <!-- Twitter Card -->
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="Color Studio - Professional Color Manipulation Tool">
-        <meta name="twitter:description" content="Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, and Tailwind.">
+        <meta name="twitter:description" content="Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, Tailwind, shadcn/ui, DaisyUI, and Bootstrap.">
         <meta name="twitter:image" content="https://color-studio.vercel.app/og-image.svg">
+
+        <!-- PWA Meta Tags -->
+        <meta name="theme-color" content="#4a90e2">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="Color Studio">
 
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="/favicon.svg">
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+        <!-- PWA Manifest -->
+        <link rel="manifest" href="/manifest.json">
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
         <link rel="stylesheet" href="index.css">
@@ -177,11 +187,14 @@
                         <button id="complementaryBtn" class="button button--primary">Complementary</button>
                         <button id="analogousBtn" class="button button--primary">Analogous</button>
                         <button id="triadicBtn" class="button button--primary">Triadic</button>
+                        <button id="splitComplementaryBtn" class="button button--primary">Split-Comp</button>
+                        <button id="squareBtn" class="button button--primary">Square</button>
+                        <button id="compoundBtn" class="button button--primary">Compound</button>
                         <button id="randomPaletteBtn" class="button button--success">Random</button>
                     </div>
                     <div id="schemeColors" class="scheme-colors"></div>
                 </div>
-                
+
                 <div class="tool-section">
                     <h3>Export</h3>
                     <div class="export-buttons">
@@ -189,8 +202,33 @@
                         <button id="exportScss" class="button button--primary">Copy SCSS</button>
                         <button id="exportJson" class="button button--primary">Copy JSON</button>
                         <button id="exportTailwind" class="button button--primary">Copy Tailwind</button>
+                        <button id="exportShadcn" class="button button--primary">Copy shadcn/ui</button>
+                        <button id="exportDaisyui" class="button button--primary">Copy DaisyUI</button>
+                        <button id="exportBootstrap" class="button button--primary">Copy Bootstrap</button>
                         <button id="copyLink" class="button button--success">Copy Link</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Gradient Generator -->
+            <div class="gradient-section">
+                <h3>Gradient Generator</h3>
+                <div class="gradient-controls">
+                    <div class="gradient-type-toggle">
+                        <button id="linearGradientBtn" class="button gradient-type-btn active">Linear</button>
+                        <button id="radialGradientBtn" class="button gradient-type-btn">Radial</button>
+                    </div>
+                    <div class="gradient-angle-control" id="gradientAngleControl">
+                        <label for="gradientAngle" id="gradientAngleText" class="slider-label">Angle: 90deg</label>
+                        <input type="range" min="0" max="360" value="90" class="slider" id="gradientAngle" name="gradientAngle">
+                    </div>
+                </div>
+                <div class="gradient-preview-container">
+                    <div id="gradientPreview" class="gradient-preview"></div>
+                </div>
+                <div class="gradient-output">
+                    <code id="gradientCode" class="gradient-code">linear-gradient(90deg, #c6d5ac, #a3b78a)</code>
+                    <button id="copyGradientBtn" class="button button--success">Copy CSS</button>
                 </div>
             </div>
 
