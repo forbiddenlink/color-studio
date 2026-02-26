@@ -38,6 +38,9 @@ const exportJsonBtn = document.getElementById('exportJson');
 // Constants
 const MAX_HISTORY = 20;
 
+// CSS Variable Helper
+const getCSSVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
 // State
 let currentColor = {
     hex: '#c6d5ac',
@@ -96,9 +99,9 @@ hexInput.addEventListener('keyup', (e) => {
     
     // Visual feedback on input validity
     if (isValidHex(hexInput.value)) {
-        hexInput.style.borderColor = '#2ecc71';
+        hexInput.style.borderColor = getCSSVar('--success-color');
     } else {
-        hexInput.style.borderColor = hex.length > 0 ? '#e74c3c' : '#e0e0e0';
+        hexInput.style.borderColor = hex.length > 0 ? getCSSVar('--error-color') : getCSSVar('--border-color');
     }
 });
 
@@ -111,7 +114,7 @@ function applyColor() {
     
     if(!isValidHex(hex)) {
         console.log('Invalid hex color');
-        hexInput.style.borderColor = '#e74c3c';
+        hexInput.style.borderColor = getCSSVar('--error-color');
         return;
     }
     
@@ -121,7 +124,7 @@ function applyColor() {
     
     updateInputColor(strippedHex);
     updateOutputColor();
-    hexInput.style.borderColor = '#2ecc71';
+    hexInput.style.borderColor = getCSSVar('--success-color');
 }
 
 // Reset sliders to default positions
@@ -509,19 +512,31 @@ const addToHistory = (hex) => {
 }
 
 const updateColorHistory = () => {
+    const historyEmpty = document.getElementById('historyEmpty');
     colorHistory.innerHTML = '';
-    colorHistoryArray.forEach(hex => {
-        const colorBox = document.createElement('div');
-        colorBox.className = 'history-color';
-        colorBox.style.backgroundColor = hex;
-        colorBox.title = hex;
-        colorBox.addEventListener('click', () => {
-            hexInput.value = hex;
-            updateInputColor(hex);
-            updateOutputColor();
+
+    if (colorHistoryArray.length === 0) {
+        // Show empty state
+        const emptyState = document.createElement('p');
+        emptyState.id = 'historyEmpty';
+        emptyState.className = 'history-empty';
+        emptyState.textContent = 'No colors saved yet. Pick a color to get started.';
+        colorHistory.appendChild(emptyState);
+    } else {
+        // Show color history
+        colorHistoryArray.forEach(hex => {
+            const colorBox = document.createElement('div');
+            colorBox.className = 'history-color';
+            colorBox.style.backgroundColor = hex;
+            colorBox.title = hex;
+            colorBox.addEventListener('click', () => {
+                hexInput.value = hex;
+                updateInputColor(hex);
+                updateOutputColor();
+            });
+            colorHistory.appendChild(colorBox);
         });
-        colorHistory.appendChild(colorBox);
-    });
+    }
 }
 
 // Event Listeners for new features
