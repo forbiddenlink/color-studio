@@ -2030,20 +2030,15 @@ hexInput.addEventListener('keyup', (e) => {
 applyButton.addEventListener('click', applyColor);
 
 function applyColor() {
-    console.log('Apply button clicked');
     const hex = hexInput.value;
-    console.log('Input value:', hex);
-    
+
     if(!isValidHex(hex)) {
-        console.log('Invalid hex color');
         hexInput.style.borderColor = getCSSVar('--error-color');
         return;
     }
-    
-    console.log('Valid hex color');
+
     const strippedHex = hex.startsWith('#') ? hex : '#' + hex;
-    console.log('Formatted hex:', strippedHex);
-    
+
     updateInputColor(strippedHex);
     updateOutputColor();
     hexInput.style.borderColor = getCSSVar('--success-color');
@@ -2327,25 +2322,36 @@ function generateJsonExport() {
 }
 
 // Utility Functions
-function copyToClipboard(text, message) {
+function copyToClipboard(text, message, buttonElement) {
+    // Use modern clipboard API with fallback
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopyFeedback(buttonElement, message);
+        }).catch(() => {
+            fallbackCopyToClipboard(text, buttonElement, message);
+        });
+    } else {
+        fallbackCopyToClipboard(text, buttonElement, message);
+    }
+}
+
+function fallbackCopyToClipboard(text, buttonElement, message) {
     const tempInput = document.createElement('textarea');
     tempInput.value = text;
     document.body.appendChild(tempInput);
     tempInput.select();
     document.execCommand('copy');
     document.body.removeChild(tempInput);
-    
-    // Show feedback
-    const originalText = event.target.textContent;
-    event.target.textContent = message;
-    setTimeout(() => {
-        event.target.textContent = originalText;
-    }, 1500);
+    showCopyFeedback(buttonElement, message);
 }
 
-function getClosestColorName(hex) {
-    // Simple exact match for now
-    return colorNames[hex.toLowerCase()] || hex;
+function showCopyFeedback(buttonElement, message) {
+    if (!buttonElement) return;
+    const originalText = buttonElement.textContent;
+    buttonElement.textContent = message;
+    setTimeout(() => {
+        buttonElement.textContent = originalText;
+    }, 1500);
 }
 
 // Update Functions
@@ -2375,29 +2381,24 @@ function updateInputColor(hex) {
 
 function updateOutputColor() {
     if (!currentColor) return;
-    
+
     // Get the current values from sliders
     const brightnessValue = parseInt(slider.value);
     const saturationValue = parseInt(saturationSlider.value);
     const hueValue = parseInt(hueSlider.value);
-    
-    console.log('Current Color:', currentColor);
-    console.log('Slider Values:', { brightnessValue, saturationValue, hueValue });
-    
+
     // Start with current color's HSL values
     let modifiedHsl = {...currentColor.hsl};
-    console.log('Initial HSL:', modifiedHsl);
-    
+
     // Apply hue change first
     modifiedHsl = alterHue(modifiedHsl, hueValue);
-    
+
     // Apply saturation change
     modifiedHsl.s = Math.min(100, Math.max(0, modifiedHsl.s + saturationValue));
-    
+
     // Apply brightness change based on toggle state
     const isToggled = toggleBtn.classList.contains('toggled');
-    console.log('Toggle state:', isToggled);
-    
+
     if (isToggled) {
         // Darken mode
         modifiedHsl.l = Math.max(0, modifiedHsl.l - brightnessValue);
@@ -2405,16 +2406,12 @@ function updateOutputColor() {
         // Lighten mode
         modifiedHsl.l = Math.min(100, modifiedHsl.l + brightnessValue);
     }
-    
-    console.log('Modified HSL after adjustments:', modifiedHsl);
-    
+
     // Convert modified HSL to RGB
     let modifiedRgb = hslToRGB(modifiedHsl.h, modifiedHsl.s, modifiedHsl.l);
-    console.log('Modified RGB:', modifiedRgb);
-    
+
     // Convert to hex for display
     const finalHex = convertRGBToHex(modifiedRgb.r, modifiedRgb.g, modifiedRgb.b);
-    console.log('Final HEX:', finalHex);
     
     // Update the altered color display
     alteredColor.style.backgroundColor = finalHex;
@@ -2530,27 +2527,27 @@ triadicBtn.addEventListener('click', () => {
 });
 
 // Export Buttons
-exportCssBtn.addEventListener('click', () => {
+exportCssBtn.addEventListener('click', (e) => {
     const css = generateCssExport();
-    copyToClipboard(css, 'CSS copied to clipboard!');
+    copyToClipboard(css, 'Copied!', e.target);
 });
 
-exportScssBtn.addEventListener('click', () => {
+exportScssBtn.addEventListener('click', (e) => {
     const scss = generateScssExport();
-    copyToClipboard(scss, 'SCSS copied to clipboard!');
+    copyToClipboard(scss, 'Copied!', e.target);
 });
 
-exportJsonBtn.addEventListener('click', () => {
+exportJsonBtn.addEventListener('click', (e) => {
     const json = generateJsonExport();
-    copyToClipboard(json, 'JSON copied to clipboard!');
+    copyToClipboard(json, 'Copied!', e.target);
 });
 
 // Tailwind Export Button
 const exportTailwindBtn = document.getElementById('exportTailwind');
 if (exportTailwindBtn) {
-    exportTailwindBtn.addEventListener('click', () => {
+    exportTailwindBtn.addEventListener('click', (e) => {
         const tailwind = generateTailwindExport();
-        copyToClipboard(tailwind, 'Tailwind config copied!');
+        copyToClipboard(tailwind, 'Copied!', e.target);
     });
 }
 
@@ -3140,6 +3137,397 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
+// ==========================================
+// FEATURE: Colorblind Simulation
+// ==========================================
 
+// Colorblind transformation matrices
+const colorblindMatrices = {
+    normal: null, // No transformation
+    protanopia: [
+        [0.567, 0.433, 0],
+        [0.558, 0.442, 0],
+        [0, 0.242, 0.758]
+    ],
+    deuteranopia: [
+        [0.625, 0.375, 0],
+        [0.7, 0.3, 0],
+        [0, 0.3, 0.7]
+    ],
+    tritanopia: [
+        [0.95, 0.05, 0],
+        [0, 0.433, 0.567],
+        [0, 0.475, 0.525]
+    ]
+};
 
+let currentColorblindMode = 'normal';
+
+// Apply colorblind transformation to RGB values
+function applyColorblindTransform(rgb, matrix) {
+    if (!matrix) return rgb;
+
+    const r = rgb.r / 255;
+    const g = rgb.g / 255;
+    const b = rgb.b / 255;
+
+    const newR = Math.round(Math.min(255, Math.max(0, (matrix[0][0] * r + matrix[0][1] * g + matrix[0][2] * b) * 255)));
+    const newG = Math.round(Math.min(255, Math.max(0, (matrix[1][0] * r + matrix[1][1] * g + matrix[1][2] * b) * 255)));
+    const newB = Math.round(Math.min(255, Math.max(0, (matrix[2][0] * r + matrix[2][1] * g + matrix[2][2] * b) * 255)));
+
+    return { r: newR, g: newG, b: newB };
+}
+
+// Get simulated hex color for colorblind mode
+function getColorblindHex(hex) {
+    if (currentColorblindMode === 'normal') return hex;
+
+    const rgb = hexToRGB(hex);
+    const transformedRgb = applyColorblindTransform(rgb, colorblindMatrices[currentColorblindMode]);
+    return convertRGBToHex(transformedRgb.r, transformedRgb.g, transformedRgb.b);
+}
+
+// Update all color displays with colorblind simulation
+function updateColorblindSimulation() {
+    const matrix = colorblindMatrices[currentColorblindMode];
+
+    // Update original color box
+    if (currentColor && currentColor.hex) {
+        const simHex = getColorblindHex(currentColor.hex);
+        inputColor.style.backgroundColor = simHex;
+    }
+
+    // Update altered color box
+    const alteredHex = rgbToHex(alteredColor.style.backgroundColor);
+    if (alteredHex && alteredHex !== 'transparent') {
+        const simAlteredHex = getColorblindHex(alteredHex);
+        alteredColor.style.backgroundColor = simAlteredHex;
+    }
+
+    // Update scheme colors
+    const schemeColorElements = document.querySelectorAll('#schemeColors .history-color');
+    schemeColorElements.forEach(el => {
+        const originalHex = el.dataset.originalHex || rgbToHex(el.style.backgroundColor);
+        if (!el.dataset.originalHex) {
+            el.dataset.originalHex = originalHex;
+        }
+        const simHex = getColorblindHex(originalHex);
+        el.style.backgroundColor = simHex;
+    });
+
+    // Update preset colors
+    const presetColors = document.querySelectorAll('.preset-color');
+    presetColors.forEach(el => {
+        const originalHex = el.dataset.color;
+        const simHex = getColorblindHex(originalHex);
+        el.style.backgroundColor = simHex;
+    });
+
+    // Update history colors
+    const historyColors = document.querySelectorAll('#colorHistory .history-color');
+    historyColors.forEach(el => {
+        const originalHex = el.title || el.dataset.originalHex;
+        if (!el.dataset.originalHex && originalHex) {
+            el.dataset.originalHex = originalHex;
+        }
+        if (originalHex) {
+            const simHex = getColorblindHex(originalHex);
+            el.style.backgroundColor = simHex;
+        }
+    });
+
+    // Update extracted colors
+    const extractedColors = document.querySelectorAll('.extracted-color');
+    extractedColors.forEach(el => {
+        const originalHex = el.dataset.hex;
+        if (originalHex) {
+            const simHex = getColorblindHex(originalHex);
+            el.style.backgroundColor = simHex;
+        }
+    });
+
+    // Update UI preview
+    if (typeof updateUIPreview === 'function') {
+        updateUIPreviewWithColorblind();
+    }
+}
+
+// Update UI preview with colorblind simulation
+function updateUIPreviewWithColorblind() {
+    const previewCard = document.getElementById('previewCard');
+    const previewButton = document.getElementById('previewButton');
+    const previewNav = document.getElementById('previewNav');
+
+    if (!previewCard || !previewButton || !previewNav || !currentColor) return;
+
+    // Get modified color
+    const modifiedHex = rgbToHex(alteredColor.style.backgroundColor);
+    const modifiedRgb = hexToRGB(modifiedHex);
+    const originalRgb = hexToRGB(currentColor.hex);
+
+    // Apply colorblind transformation
+    const simModifiedRgb = applyColorblindTransform(modifiedRgb, colorblindMatrices[currentColorblindMode]);
+    const simOriginalRgb = applyColorblindTransform(originalRgb, colorblindMatrices[currentColorblindMode]);
+
+    // Update preview elements
+    previewButton.style.backgroundColor = `rgb(${simModifiedRgb.r}, ${simModifiedRgb.g}, ${simModifiedRgb.b})`;
+
+    const activeNavItem = previewNav.querySelector('.preview-nav-item.active');
+    if (activeNavItem) {
+        activeNavItem.style.backgroundColor = `rgb(${simModifiedRgb.r}, ${simModifiedRgb.g}, ${simModifiedRgb.b})`;
+    }
+
+    previewNav.style.backgroundColor = `rgba(${simOriginalRgb.r}, ${simOriginalRgb.g}, ${simOriginalRgb.b}, 0.1)`;
+}
+
+// Initialize colorblind buttons
+function initColorblindSimulation() {
+    const buttons = document.querySelectorAll('.colorblind-btn');
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active state
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Set mode and update display
+            currentColorblindMode = btn.dataset.mode;
+
+            // If switching back to normal, restore original colors
+            if (currentColorblindMode === 'normal') {
+                // Restore original colors
+                if (currentColor && currentColor.hex) {
+                    inputColor.style.backgroundColor = currentColor.hex;
+                }
+                updateOutputColor();
+
+                // Restore preset colors
+                const presetColors = document.querySelectorAll('.preset-color');
+                presetColors.forEach(el => {
+                    el.style.backgroundColor = el.dataset.color;
+                });
+
+                // Restore scheme colors
+                const schemeColorElements = document.querySelectorAll('#schemeColors .history-color');
+                schemeColorElements.forEach(el => {
+                    if (el.dataset.originalHex) {
+                        el.style.backgroundColor = el.dataset.originalHex;
+                    }
+                });
+
+                // Restore history colors
+                const historyColors = document.querySelectorAll('#colorHistory .history-color');
+                historyColors.forEach(el => {
+                    if (el.dataset.originalHex) {
+                        el.style.backgroundColor = el.dataset.originalHex;
+                    }
+                });
+
+                // Restore extracted colors
+                const extractedColors = document.querySelectorAll('.extracted-color');
+                extractedColors.forEach(el => {
+                    if (el.dataset.hex) {
+                        el.style.backgroundColor = el.dataset.hex;
+                    }
+                });
+
+                // Update UI preview
+                if (typeof updateUIPreview === 'function') {
+                    updateUIPreview();
+                }
+            } else {
+                updateColorblindSimulation();
+            }
+
+            showToast(`Colorblind mode: ${btn.textContent}`);
+        });
+    });
+}
+
+// ==========================================
+// FEATURE: URL State for Sharing
+// ==========================================
+
+// Debounce helper
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Update URL with current state
+function updateURL() {
+    const params = new URLSearchParams();
+
+    // Add current color (without #)
+    params.set('color', currentColor.hex.replace('#', ''));
+
+    // Add slider values
+    params.set('brightness', slider.value);
+    params.set('saturation', saturationSlider.value);
+    params.set('hue', hueSlider.value);
+
+    // Add toggle state (lighten/darken)
+    const isDarken = toggleBtn.classList.contains('toggled');
+    if (isDarken) {
+        params.set('mode', 'darken');
+    }
+
+    // Update URL without reload
+    history.replaceState(null, '', '?' + params.toString());
+}
+
+// Debounced version of updateURL
+const debouncedUpdateURL = debounce(updateURL, 300);
+
+// Load state from URL
+function loadFromURL() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('color')) {
+        const colorParam = params.get('color');
+        const hex = colorParam.startsWith('#') ? colorParam : '#' + colorParam;
+
+        if (isValidHex(hex)) {
+            // Update hex input and color picker
+            hexInput.value = hex;
+            colorPicker.value = hex;
+
+            // Update current color
+            updateInputColor(hex);
+
+            // Restore brightness/saturation/hue if present
+            if (params.has('brightness')) {
+                const brightness = parseInt(params.get('brightness'));
+                if (!isNaN(brightness) && brightness >= 0 && brightness <= 100) {
+                    slider.value = brightness;
+                    sliderText.textContent = `Brightness: ${brightness}%`;
+                }
+            }
+
+            if (params.has('saturation')) {
+                const saturation = parseInt(params.get('saturation'));
+                if (!isNaN(saturation) && saturation >= -100 && saturation <= 100) {
+                    saturationSlider.value = saturation;
+                    saturationText.textContent = `Saturation: ${saturation}%`;
+                }
+            }
+
+            if (params.has('hue')) {
+                const hue = parseInt(params.get('hue'));
+                if (!isNaN(hue) && hue >= 0 && hue <= 360) {
+                    hueSlider.value = hue;
+                    hueText.textContent = `Hue: ${hue}°`;
+                }
+            }
+
+            // Restore darken mode if present
+            if (params.get('mode') === 'darken') {
+                toggleBtn.classList.add('toggled');
+                lightenText.classList.add('unselected');
+                darkenText.classList.remove('unselected');
+            }
+
+            // Update output color with restored settings
+            updateOutputColor();
+
+            return true; // Indicates state was loaded from URL
+        }
+    }
+
+    return false; // No state loaded from URL
+}
+
+// Copy link to clipboard
+function copyShareLink() {
+    // Ensure URL is up to date
+    updateURL();
+
+    const url = window.location.href;
+
+    navigator.clipboard.writeText(url).then(() => {
+        showToast('Link copied to clipboard!');
+    }).catch(() => {
+        // Fallback for older browsers
+        const tempInput = document.createElement('input');
+        tempInput.value = url;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        showToast('Link copied to clipboard!');
+    });
+}
+
+// Hook into existing functions to update URL on changes
+function hookURLUpdates() {
+    // Store original updateOutputColor
+    const originalUpdateOutputColor = window.updateOutputColor || updateOutputColor;
+
+    // Create wrapped version
+    const wrappedUpdateOutputColor = function() {
+        originalUpdateOutputColor();
+        debouncedUpdateURL();
+    };
+
+    // Replace slider event listeners to include URL update
+    slider.addEventListener('input', debouncedUpdateURL);
+    saturationSlider.addEventListener('input', debouncedUpdateURL);
+    hueSlider.addEventListener('input', debouncedUpdateURL);
+
+    // Hook into toggle button
+    toggleBtn.addEventListener('click', () => {
+        setTimeout(debouncedUpdateURL, 50);
+    });
+
+    // Hook into color picker
+    colorPicker.addEventListener('input', debouncedUpdateURL);
+
+    // Hook into apply button
+    applyButton.addEventListener('click', () => {
+        setTimeout(debouncedUpdateURL, 50);
+    });
+
+    // Hook into preset colors
+    const presetColors = document.querySelectorAll('.preset-color');
+    presetColors.forEach(preset => {
+        preset.addEventListener('click', () => {
+            setTimeout(debouncedUpdateURL, 50);
+        });
+    });
+}
+
+// Initialize Copy Link button
+function initCopyLinkButton() {
+    const copyLinkBtn = document.getElementById('copyLink');
+    if (copyLinkBtn) {
+        copyLinkBtn.addEventListener('click', copyShareLink);
+    }
+}
+
+// Initialize URL state features
+document.addEventListener('DOMContentLoaded', () => {
+    // Try to load state from URL first
+    const loadedFromURL = loadFromURL();
+
+    // Initialize colorblind simulation
+    initColorblindSimulation();
+
+    // Initialize Copy Link button
+    initCopyLinkButton();
+
+    // Hook URL updates to existing controls
+    hookURLUpdates();
+
+    // If loaded from URL, show a toast
+    if (loadedFromURL) {
+        showToast('Palette loaded from shared link');
+    }
+});
 

@@ -1262,3 +1262,75 @@ input[type="color"]:disabled {
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 }
+
+/* ==========================================
+   Colorblind Simulation Section
+   ========================================== */
+.colorblind-section {
+    background: var(--background-secondary);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin: var(--spacing-xl) 0;
+}
+
+.colorblind-section h3 {
+    font-size: var(--font-size-h3);
+    font-weight: 600;
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--text-primary);
+}
+
+.colorblind-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.colorblind-btn {
+    background-color: var(--background-primary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+    flex: 1;
+    min-width: 120px;
+}
+
+.colorblind-btn:hover {
+    border-color: var(--primary-color);
+    background-color: var(--background-primary);
+}
+
+.colorblind-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Responsive adjustments for colorblind section */
+@media (max-width: 768px) {
+    .colorblind-buttons {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .colorblind-btn {
+        min-width: auto;
+    }
+}
+
+/* Dark Mode for colorblind section */
+@media (prefers-color-scheme: dark) {
+    .colorblind-btn {
+        background-color: var(--background-primary);
+        border-color: var(--border-color);
+    }
+
+    .colorblind-btn:hover {
+        border-color: var(--primary-color);
+    }
+
+    .colorblind-btn.active {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+}
