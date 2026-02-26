@@ -41,6 +41,17 @@
                 </div>
             </div>
 
+            <!-- Feature 1: Image Color Extraction -->
+            <div class="image-extract-section">
+                <h3>Extract from Image</h3>
+                <div class="image-upload-area" id="imageDropZone">
+                    <input type="file" id="imageInput" accept="image/*" hidden>
+                    <p>Drop image here or <button class="button button--primary" id="uploadBtn">Choose File</button></p>
+                </div>
+                <canvas id="imageCanvas" hidden></canvas>
+                <div id="extractedColors" class="extracted-colors"></div>
+            </div>
+
             <div class="controls-section">
                 <!-- Brightness Control -->
                 <div class="control-group">
@@ -107,6 +118,23 @@
                 </div>
             </div>
 
+            <!-- Feature 2: Real-time UI Preview -->
+            <div class="ui-preview-section">
+                <h3>UI Preview</h3>
+                <div class="preview-container">
+                    <div class="preview-card" id="previewCard">
+                        <div class="preview-header">Card Title</div>
+                        <p class="preview-text">Sample text content for this card.</p>
+                        <button class="preview-button" id="previewButton">Button</button>
+                    </div>
+                    <div class="preview-nav" id="previewNav">
+                        <span class="preview-nav-item active">Home</span>
+                        <span class="preview-nav-item">About</span>
+                        <span class="preview-nav-item">Contact</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="additional-tools">
                 <div class="tool-section">
                     <h3>Color Schemes</h3>
@@ -114,6 +142,7 @@
                         <button id="complementaryBtn" class="button button--primary">Complementary</button>
                         <button id="analogousBtn" class="button button--primary">Analogous</button>
                         <button id="triadicBtn" class="button button--primary">Triadic</button>
+                        <button id="randomPaletteBtn" class="button button--success">Random</button>
                     </div>
                     <div id="schemeColors" class="scheme-colors"></div>
                 </div>
@@ -124,6 +153,7 @@
                         <button id="exportCss" class="button button--primary">Copy CSS</button>
                         <button id="exportScss" class="button button--primary">Copy SCSS</button>
                         <button id="exportJson" class="button button--primary">Copy JSON</button>
+                        <button id="exportTailwind" class="button button--primary">Copy Tailwind</button>
                     </div>
                 </div>
             </div>
@@ -136,6 +166,15 @@
                 <div id="colorHistory" class="history-container">
                     <p id="historyEmpty" class="history-empty">No colors saved yet. Pick a color to get started.</p>
                 </div>
+            </div>
+
+            <!-- Keyboard Hints -->
+            <div class="keyboard-hints">
+                <span class="keyboard-hint-title">Keyboard Shortcuts:</span>
+                <span class="keyboard-hint"><kbd>Space</kbd> Random Palette</span>
+                <span class="keyboard-hint"><kbd>L</kbd> Lock/Unlock</span>
+                <span class="keyboard-hint"><kbd>C</kbd> Copy Color</span>
+                <span id="lockIndicator" class="lock-indicator">Unlocked</span>
             </div>
         </div>
         
