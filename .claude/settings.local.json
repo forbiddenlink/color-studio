@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.awwwards.com)",
+      "WebFetch(domain:mobbin.com)",
+      "WebFetch(domain:www.realtimecolors.com)",
+      "WebFetch(domain:coolors.co)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nImplement design system with typography scale and semantic colors\n\n- Add typography scale \\(h1-small\\) with 1.25 ratio\n- Add semantic color tokens \\(error, warning, info\\)\n- Standardize hover interactions across swatches\n- Replace hardcoded colors in JS with CSS variable reads\n- Add empty state for color history\n- Fix toggle radius to use pill token\n- Add section header and tool section styling\n- Update dark mode with semantic color variants\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:color.adobe.com)",
+      "WebFetch(domain:huemint.com)",
+      "WebFetch(domain:www.khroma.co)",
+      "WebFetch(domain:colorhunt.co)",
+      "WebFetch(domain:paletton.com)",
+      "WebFetch(domain:pigment.shapefactory.co)",
+      "Bash(node --check:*)",
+      "Bash(ls:*)",
+      "Bash(node -e:*)",
+      "Bash(npx htmlhint:*)",
+      "Bash(echo:*)",
+      "Bash(~/.claude/scripts/spec_metadata.sh:*)",
+      "WebFetch(domain:color-studio-mu.vercel.app)",
+      "Bash(vercel --prod --yes:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "Bash(npm run build:*)",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_close"
+    ]
+  }
+}

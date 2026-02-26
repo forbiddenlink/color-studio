@@ -61,20 +61,21 @@ Output is generated in the `dist/` directory.
 
 | Aspect | Implementation |
 |--------|---------------|
-| Framework | Vanilla JavaScript (ES6+) |
+| Framework | Vanilla HTML/CSS/JS (ES6+) |
 | Build Tool | Webpack 5 |
-| Styling | CSS with custom properties |
-| Typography | Montserrat (Google Fonts) |
+| Styling | CSS with custom properties (Tokens) |
+| Typography | Inter & JetBrains Mono (Google Fonts) |
 | State | localStorage for history |
 
 ### Design System
 
-The UI is built on a consistent design system:
+The UI is built on a premium, dark-mode design system tailored for professional creators:
 
-- **Typography Scale** — 1.25 ratio (H1 → Small)
-- **Spacing** — 8pt grid (4/8/16/24/32px)
-- **Colors** — Semantic tokens (primary, success, error, warning)
-- **Surfaces** — 3-tier radius system (4/8/12px)
+- **Theme** — Cinematic dark mode (`#101014` base) with high-signal Indigo accents
+- **Layout** — Responsive 100vw/100vh app shell (Sidebar, Main Canvas, Tools Panel)
+- **Typography** — Inter for fluid UI copy, JetBrains Mono for technical hex/rgb outputs
+- **Surfaces** — Elevated tool panels with inset shadows and edge-to-edge fluid color bleeds
+- **Spacing** — Dense 4pt rhythm system for a compact, utility-first feel
 
 ## Browser Support
 
