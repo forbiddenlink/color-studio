@@ -2,14 +2,22 @@
 
 A modern color manipulation tool for designers and developers. Create, modify, and export colors in real-time.
 
+**[Live Demo →](https://color-studio-mu.vercel.app)**
+
 ## Features
 
 - **Color Input** — HEX input with validation, native color picker, 8 quick presets
 - **Color Manipulation** — Brightness, saturation, and hue controls with real-time preview
-- **Color Schemes** — Generate complementary, analogous, and triadic palettes
-- **Export** — Copy as CSS, SCSS, or JSON with one click
+- **Color Schemes** — Complementary, analogous, triadic, and random palette generation
+- **Keyboard Shortcuts** — Space=random palette, L=lock/unlock, C=copy color
+- **Image Extraction** — Drag-drop images to extract dominant colors (median-cut algorithm)
+- **UI Preview** — See colors applied to card and nav components in real-time
+- **Colorblind Simulation** — Protanopia, deuteranopia, tritanopia visualization
+- **URL Sharing** — Share palettes via URL state persistence
+- **Export** — CSS, SCSS, JSON, Tailwind config, or shareable link
+- **1500+ Color Names** — Semantic names using Name That Color algorithm
 - **History** — Automatic color history with localStorage persistence
-- **Accessibility** — WCAG contrast ratio display, dark mode support, reduced motion support
+- **Accessibility** — WCAG AA/AAA badges, dark mode, reduced motion support
 
 ## Getting Started
 
