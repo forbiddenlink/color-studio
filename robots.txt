@@ -1,0 +1,5 @@
+# robots.txt for color-studio.vercel.app
+User-agent: *
+Allow: /
+
+Sitemap: https://color-studio.vercel.app/sitemap.xml

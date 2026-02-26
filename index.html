@@ -1,13 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Color Studio - Professional Color Manipulation Tool for Designers</title>
+        <meta name="description" content="A powerful color manipulation tool for designers and developers. Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, and Tailwind.">
+        <link rel="canonical" href="https://color-studio.vercel.app/">
+
+        <!-- Open Graph -->
+        <meta property="og:type" content="website">
+        <meta property="og:title" content="Color Studio - Professional Color Manipulation Tool">
+        <meta property="og:description" content="Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, and Tailwind.">
+        <meta property="og:image" content="https://color-studio.vercel.app/og-image.svg">
+        <meta property="og:url" content="https://color-studio.vercel.app/">
+
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="Color Studio - Professional Color Manipulation Tool">
+        <meta name="twitter:description" content="Create color schemes, extract colors from images, simulate colorblindness, and export to CSS, SCSS, JSON, and Tailwind.">
+        <meta name="twitter:image" content="https://color-studio.vercel.app/og-image.svg">
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
         <link rel="stylesheet" href="index.css">
         <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700" rel="stylesheet" />
-        <title>Color Studio</title>
     </head>
     <body>
-        <div class="container">
+        <main class="container">
             <h1 class="title">Color Studio</h1>
             
             <div class="color-input-section">
@@ -188,8 +212,8 @@
                 <span class="keyboard-hint"><kbd>C</kbd> Copy Color</span>
                 <span id="lockIndicator" class="lock-indicator">Unlocked</span>
             </div>
-        </div>
-        
+        </main>
+
         <script src="index.js"></script>
     </body>
 </html>
