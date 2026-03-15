@@ -18,5 +18,7 @@
     "babel-loader": "^9.1.2",
     "css-loader": "^6.8.1",
     "style-loader": "^3.3.3"
-  }
+  },
+  "license": "MIT",
+  "private": false
 }
