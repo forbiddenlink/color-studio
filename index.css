@@ -576,6 +576,11 @@ input[type="text"]:focus {
   color: var(--accent-hover);
 }
 
+.oklch-value {
+  color: var(--success-color);
+  font-weight: 500;
+}
+
 /* Color Presets */
 .color-presets h3 {
   font-size: var(--font-size-h3);

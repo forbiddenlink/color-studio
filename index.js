@@ -1,3 +1,29 @@
+// PostHog Analytics
+import posthog from 'posthog-js';
+
+// Culori - Modern color manipulation library with OKLCH support
+import {
+  parse,
+  formatHex,
+  formatRgb,
+  oklch,
+  rgb,
+  converter,
+  interpolate,
+  clampChroma
+} from 'culori';
+
+const POSTHOG_KEY = 'phc_y15r12flE4emZrCDkAh4upaz9c204yAKaZ8Hb5eIUlj';
+const POSTHOG_HOST = 'https://us.posthog.com';
+
+if (POSTHOG_KEY) {
+  posthog.init(POSTHOG_KEY, {
+    api_host: POSTHOG_HOST,
+    capture_pageview: true,
+    capture_pageleave: true,
+  });
+}
+
 // DOM Elements
 const hexInput = document.getElementById('hexInput');
 const inputColor = document.getElementById('inputColor');
@@ -24,6 +50,10 @@ const inputColorHsl = document.getElementById('inputColorHsl');
 const alteredColorHex = document.getElementById('alteredColorHex');
 const alteredColorRgb = document.getElementById('alteredColorRgb');
 const alteredColorHsl = document.getElementById('alteredColorHsl');
+
+// OKLCH DOM elements
+const inputColorOklch = document.getElementById('inputColorOklch');
+const alteredColorOklch = document.getElementById('alteredColorOklch');
 const colorName = document.getElementById('colorName');
 const modifiedColorName = document.getElementById('modifiedColorName');
 const clearHistoryBtn = document.getElementById('clearHistory');
@@ -44,11 +74,16 @@ const MAX_HISTORY = 20;
 // CSS Variable Helper
 const getCSSVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
+// Culori converters
+const toOklch = converter('oklch');
+const toRgb = converter('rgb');
+
 // State
 let currentColor = {
     hex: '#c6d5ac',
     rgb: { r: 198, g: 213, b: 172 },
-    hsl: { h: 80, s: 33, l: 75 }
+    hsl: { h: 80, s: 33, l: 75 },
+    oklch: { l: 0.85, c: 0.05, h: 120 }
 };
 
 // Color History
@@ -2217,6 +2252,101 @@ function hslToRGB(h, s, l) {
     };
 }
 
+// OKLCH Color Conversion Functions (using culori)
+function hexToOklch(hex) {
+    const color = parse(hex);
+    if (!color) return { l: 0, c: 0, h: 0 };
+    const oklchColor = toOklch(color);
+    return {
+        l: oklchColor.l || 0,
+        c: oklchColor.c || 0,
+        h: oklchColor.h || 0
+    };
+}
+
+function oklchToHex(l, c, h) {
+    // Clamp chroma to ensure the color is displayable in sRGB
+    const color = clampChroma({ mode: 'oklch', l, c, h }, 'oklch');
+    return formatHex(color) || '#000000';
+}
+
+function formatOklchString(oklchObj) {
+    const l = (oklchObj.l * 100).toFixed(1);
+    const c = oklchObj.c.toFixed(3);
+    const h = (oklchObj.h || 0).toFixed(1);
+    return `oklch(${l}% ${c} ${h})`;
+}
+
+// OKLCH-based color manipulation (perceptually uniform)
+function alterLightnessOklch(oklchColor, percentage, mode = 'lighten') {
+    let newL = oklchColor.l;
+    if (mode === 'lighten') {
+        newL = Math.min(1, oklchColor.l + (percentage / 100));
+    } else {
+        newL = Math.max(0, oklchColor.l - (percentage / 100));
+    }
+    return { l: newL, c: oklchColor.c, h: oklchColor.h };
+}
+
+function alterChromaOklch(oklchColor, percentage) {
+    // Chroma typically ranges from 0 to ~0.4 for most colors
+    const delta = percentage / 250; // Scale percentage to reasonable chroma change
+    const newC = Math.max(0, Math.min(0.4, oklchColor.c + delta));
+    return { l: oklchColor.l, c: newC, h: oklchColor.h };
+}
+
+function alterHueOklch(oklchColor, degrees) {
+    const newH = ((oklchColor.h || 0) + degrees) % 360;
+    return { l: oklchColor.l, c: oklchColor.c, h: newH < 0 ? newH + 360 : newH };
+}
+
+// Generate a color ramp using OKLCH interpolation (perceptually uniform)
+function generateColorRampOklch(startHex, endHex, steps = 5) {
+    const start = parse(startHex);
+    const end = parse(endHex);
+    if (!start || !end) return [startHex, endHex];
+
+    // Use culori's interpolate in OKLCH space for smooth transitions
+    const scale = interpolate([start, end], 'oklch');
+    const colors = [];
+
+    for (let i = 0; i < steps; i++) {
+        const t = i / (steps - 1);
+        const color = scale(t);
+        colors.push(formatHex(clampChroma(color, 'oklch')) || '#000000');
+    }
+
+    return colors;
+}
+
+// Generate tints (lighter versions) of a color using OKLCH
+function generateTints(hex, count = 5) {
+    const oklchColor = hexToOklch(hex);
+    const tints = [];
+
+    for (let i = 0; i < count; i++) {
+        const t = (i + 1) / (count + 1);
+        const newL = oklchColor.l + (1 - oklchColor.l) * t;
+        tints.push(oklchToHex(newL, oklchColor.c * (1 - t * 0.5), oklchColor.h));
+    }
+
+    return tints;
+}
+
+// Generate shades (darker versions) of a color using OKLCH
+function generateShades(hex, count = 5) {
+    const oklchColor = hexToOklch(hex);
+    const shades = [];
+
+    for (let i = 0; i < count; i++) {
+        const t = (i + 1) / (count + 1);
+        const newL = oklchColor.l * (1 - t);
+        shades.push(oklchToHex(newL, oklchColor.c, oklchColor.h));
+    }
+
+    return shades;
+}
+
 // Color Manipulation Functions
 function alterBrightness(rgb, percentage) {
     const factor = 1 + (percentage / 100);
@@ -2244,7 +2374,57 @@ function alterHue(hsl, amount) {
     };
 }
 
-// Color Scheme Functions
+// Color Scheme Functions - Using OKLCH for perceptually uniform color harmony
+// OKLCH hue rotation produces more visually consistent color schemes
+
+function getComplementaryColorOklch(oklchColor) {
+    const complementaryHue = ((oklchColor.h || 0) + 180) % 360;
+    return oklchToHex(oklchColor.l, oklchColor.c, complementaryHue);
+}
+
+function getAnalogousColorsOklch(oklchColor) {
+    const hues = [
+        ((oklchColor.h || 0) - 30 + 360) % 360,
+        ((oklchColor.h || 0) + 30) % 360
+    ];
+    return hues.map(h => oklchToHex(oklchColor.l, oklchColor.c, h));
+}
+
+function getTriadicColorsOklch(oklchColor) {
+    const hues = [
+        ((oklchColor.h || 0) + 120) % 360,
+        ((oklchColor.h || 0) + 240) % 360
+    ];
+    return hues.map(h => oklchToHex(oklchColor.l, oklchColor.c, h));
+}
+
+function getSplitComplementaryColorsOklch(oklchColor) {
+    const hues = [
+        ((oklchColor.h || 0) + 150) % 360,
+        ((oklchColor.h || 0) + 210) % 360
+    ];
+    return hues.map(h => oklchToHex(oklchColor.l, oklchColor.c, h));
+}
+
+function getSquareColorsOklch(oklchColor) {
+    const hues = [
+        ((oklchColor.h || 0) + 90) % 360,
+        ((oklchColor.h || 0) + 180) % 360,
+        ((oklchColor.h || 0) + 270) % 360
+    ];
+    return hues.map(h => oklchToHex(oklchColor.l, oklchColor.c, h));
+}
+
+function getCompoundColorsOklch(oklchColor) {
+    const hues = [
+        ((oklchColor.h || 0) + 30) % 360,
+        ((oklchColor.h || 0) + 180) % 360,
+        ((oklchColor.h || 0) + 210) % 360
+    ];
+    return hues.map(h => oklchToHex(oklchColor.l, oklchColor.c, h));
+}
+
+// Legacy HSL-based functions (kept for backwards compatibility)
 function getComplementaryColor(hsl) {
     const complementaryHue = (hsl.h + 180) % 360;
     const rgb = hslToRGB(complementaryHue, hsl.s, hsl.l);
@@ -2313,11 +2493,13 @@ function displayColorScheme(colors) {
 
 // Export Functions
 function generateCssExport() {
+    const oklchStr = formatOklchString(currentColor.oklch);
     return `:root {
     --color-base: ${currentColor.hex};
     --color-modified: ${alteredColor.style.backgroundColor};
     --color-rgb: ${currentColor.rgb.r}, ${currentColor.rgb.g}, ${currentColor.rgb.b};
     --color-hsl: ${currentColor.hsl.h}, ${currentColor.hsl.s}%, ${currentColor.hsl.l}%;
+    --color-oklch: ${oklchStr};
 }`;
 }
 
@@ -2333,19 +2515,36 @@ $color-hsl: (
     h: ${currentColor.hsl.h},
     s: ${currentColor.hsl.s}%,
     l: ${currentColor.hsl.l}%
+);
+$color-oklch: (
+    l: ${(currentColor.oklch.l * 100).toFixed(1)}%,
+    c: ${currentColor.oklch.c.toFixed(3)},
+    h: ${(currentColor.oklch.h || 0).toFixed(1)}
 );`;
 }
 
 function generateJsonExport() {
+    const modifiedHex = rgbToHex(alteredColor.style.backgroundColor);
+    const modifiedOklch = hexToOklch(modifiedHex);
     const colorData = {
         base: {
             hex: currentColor.hex,
             rgb: currentColor.rgb,
-            hsl: currentColor.hsl
+            hsl: currentColor.hsl,
+            oklch: {
+                l: currentColor.oklch.l,
+                c: currentColor.oklch.c,
+                h: currentColor.oklch.h || 0
+            }
         },
         modified: {
-            hex: rgbToHex(alteredColor.style.backgroundColor),
-            rgb: convertHexToRGB(rgbToHex(alteredColor.style.backgroundColor))
+            hex: modifiedHex,
+            rgb: convertHexToRGB(modifiedHex),
+            oklch: {
+                l: modifiedOklch.l,
+                c: modifiedOklch.c,
+                h: modifiedOklch.h || 0
+            }
         }
     };
     return JSON.stringify(colorData, null, 2);
@@ -2390,11 +2589,13 @@ function updateInputColor(hex) {
 
     const rgb = hexToRGB(hex);
     const hsl = rgbToHSL(rgb.r, rgb.g, rgb.b);
+    const oklchColor = hexToOklch(hex);
 
     currentColor = {
         hex: hex,
         rgb: rgb,
-        hsl: hsl
+        hsl: hsl,
+        oklch: oklchColor
     };
 
     // Update displays
@@ -2404,6 +2605,11 @@ function updateInputColor(hex) {
     inputColorHex.textContent = hex;
     inputColorRgb.textContent = `RGB(${rgb.r}, ${rgb.g}, ${rgb.b})`;
     inputColorHsl.textContent = `HSL(${hsl.h}°, ${hsl.s}%, ${hsl.l}%)`;
+
+    // Update OKLCH display
+    if (inputColorOklch) {
+        inputColorOklch.textContent = formatOklchString(oklchColor);
+    }
 
     // Use enhanced color naming
     colorName.textContent = getColorName(hex);
@@ -2417,38 +2623,39 @@ function updateOutputColor() {
     const saturationValue = parseInt(saturationSlider.value);
     const hueValue = parseInt(hueSlider.value);
 
-    // Start with current color's HSL values
-    let modifiedHsl = {...currentColor.hsl};
+    // Use OKLCH for perceptually uniform color manipulation
+    // This provides more consistent results than HSL
+    let modifiedOklch = { ...currentColor.oklch };
 
-    // Apply hue change first
-    modifiedHsl = alterHue(modifiedHsl, hueValue);
+    // Apply hue change in OKLCH space
+    modifiedOklch = alterHueOklch(modifiedOklch, hueValue);
 
-    // Apply saturation change
-    modifiedHsl.s = Math.min(100, Math.max(0, modifiedHsl.s + saturationValue));
+    // Apply chroma (saturation) change in OKLCH space
+    modifiedOklch = alterChromaOklch(modifiedOklch, saturationValue);
 
-    // Apply brightness change based on toggle state
+    // Apply lightness change based on toggle state
     const isToggled = toggleBtn.classList.contains('toggled');
+    const mode = isToggled ? 'darken' : 'lighten';
+    modifiedOklch = alterLightnessOklch(modifiedOklch, brightnessValue, mode);
 
-    if (isToggled) {
-        // Darken mode
-        modifiedHsl.l = Math.max(0, modifiedHsl.l - brightnessValue);
-    } else {
-        // Lighten mode
-        modifiedHsl.l = Math.min(100, modifiedHsl.l + brightnessValue);
-    }
+    // Convert OKLCH back to hex using culori (with gamut mapping)
+    const finalHex = oklchToHex(modifiedOklch.l, modifiedOklch.c, modifiedOklch.h);
 
-    // Convert modified HSL to RGB
-    let modifiedRgb = hslToRGB(modifiedHsl.h, modifiedHsl.s, modifiedHsl.l);
+    // Get RGB and HSL for display (from the final hex)
+    const modifiedRgb = hexToRGB(finalHex);
+    const modifiedHsl = rgbToHSL(modifiedRgb.r, modifiedRgb.g, modifiedRgb.b);
 
-    // Convert to hex for display
-    const finalHex = convertRGBToHex(modifiedRgb.r, modifiedRgb.g, modifiedRgb.b);
-    
     // Update the altered color display
     alteredColor.style.backgroundColor = finalHex;
     alteredColorHex.textContent = finalHex;
     alteredColorRgb.textContent = `RGB(${modifiedRgb.r}, ${modifiedRgb.g}, ${modifiedRgb.b})`;
     alteredColorHsl.textContent = `HSL(${modifiedHsl.h}°, ${modifiedHsl.s}%, ${modifiedHsl.l}%)`;
-    
+
+    // Update OKLCH display
+    if (alteredColorOklch) {
+        alteredColorOklch.textContent = formatOklchString(modifiedOklch);
+    }
+
     // Calculate and show contrast ratio
     const contrast = calculateContrastRatio(currentColor.rgb, modifiedRgb);
     alteredColorText.textContent = `Contrast Ratio: ${contrast.toFixed(2)}:1`;
@@ -2540,34 +2747,34 @@ clearHistoryBtn.addEventListener('click', () => {
     updateColorHistory();
 });
 
-// Color Scheme Generators
+// Color Scheme Generators - Using OKLCH for perceptually uniform color harmony
 complementaryBtn.addEventListener('click', () => {
-    const complementary = getComplementaryColor(currentColor.hsl);
+    const complementary = getComplementaryColorOklch(currentColor.oklch);
     displayColorScheme([currentColor.hex, complementary]);
 });
 
 analogousBtn.addEventListener('click', () => {
-    const analogous = getAnalogousColors(currentColor.hsl);
+    const analogous = getAnalogousColorsOklch(currentColor.oklch);
     displayColorScheme([currentColor.hex, ...analogous]);
 });
 
 triadicBtn.addEventListener('click', () => {
-    const triadic = getTriadicColors(currentColor.hsl);
+    const triadic = getTriadicColorsOklch(currentColor.oklch);
     displayColorScheme([currentColor.hex, ...triadic]);
 });
 
 splitComplementaryBtn.addEventListener('click', () => {
-    const splitComp = getSplitComplementaryColors(currentColor.hsl);
+    const splitComp = getSplitComplementaryColorsOklch(currentColor.oklch);
     displayColorScheme([currentColor.hex, ...splitComp]);
 });
 
 squareBtn.addEventListener('click', () => {
-    const square = getSquareColors(currentColor.hsl);
+    const square = getSquareColorsOklch(currentColor.oklch);
     displayColorScheme([currentColor.hex, ...square]);
 });
 
 compoundBtn.addEventListener('click', () => {
-    const compound = getCompoundColors(currentColor.hsl);
+    const compound = getCompoundColorsOklch(currentColor.oklch);
     displayColorScheme([currentColor.hex, ...compound]);
 });
 
@@ -2655,15 +2862,33 @@ function getGradientColors() {
     return [baseColor, modifiedColor];
 }
 
-// Generate gradient CSS string
+// Generate gradient CSS string with OKLCH interpolation for smoother gradients
 function generateGradientCSS() {
     const colors = getGradientColors();
     const colorStops = colors.join(', ');
 
+    // Use OKLCH color space for perceptually uniform gradient interpolation
+    // This produces smoother, more vibrant gradients without muddy middle colors
     if (gradientState.type === 'linear') {
-        return `linear-gradient(${gradientState.angle}deg, ${colorStops})`;
+        return `linear-gradient(in oklch ${gradientState.angle}deg, ${colorStops})`;
     } else {
-        return `radial-gradient(circle, ${colorStops})`;
+        return `radial-gradient(in oklch circle, ${colorStops})`;
+    }
+}
+
+// Generate gradient CSS with fallback for older browsers
+function generateGradientCSSWithFallback() {
+    const colors = getGradientColors();
+    const colorStops = colors.join(', ');
+    const oklchGradient = generateGradientCSS();
+
+    // Return both the OKLCH gradient and a fallback
+    if (gradientState.type === 'linear') {
+        const fallback = `linear-gradient(${gradientState.angle}deg, ${colorStops})`;
+        return { oklch: oklchGradient, fallback };
+    } else {
+        const fallback = `radial-gradient(circle, ${colorStops})`;
+        return { oklch: oklchGradient, fallback };
     }
 }
 
@@ -2980,35 +3205,37 @@ module.exports = {
 }
 
 function generateColorScale(hex) {
-    const rgb = hexToRGB(hex);
-    const hsl = rgbToHSL(rgb.r, rgb.g, rgb.b);
+    // Use OKLCH for perceptually uniform color scale generation
+    const oklchColor = hexToOklch(hex);
 
     const shades = {};
+    // OKLCH lightness values (0-1 scale) for Tailwind-like shades
     const lightnessValues = {
-        50: 97,
-        100: 94,
-        200: 86,
-        300: 77,
-        400: 66,
-        500: 55,
-        600: 45,
-        700: 37,
-        800: 29,
-        900: 21,
-        950: 13
+        50: 0.97,
+        100: 0.94,
+        200: 0.86,
+        300: 0.77,
+        400: 0.66,
+        500: 0.55,
+        600: 0.45,
+        700: 0.37,
+        800: 0.29,
+        900: 0.21,
+        950: 0.13
     };
 
     for (const [shade, lightness] of Object.entries(lightnessValues)) {
-        // Adjust saturation slightly for better visual results
-        let adjustedSat = hsl.s;
-        if (lightness > 70) {
-            adjustedSat = Math.max(hsl.s - 10, 0);
-        } else if (lightness < 30) {
-            adjustedSat = Math.min(hsl.s + 10, 100);
+        // In OKLCH, chroma should be reduced for very light/dark shades
+        let adjustedChroma = oklchColor.c;
+        if (lightness > 0.7) {
+            // Reduce chroma for light shades (tints)
+            adjustedChroma = oklchColor.c * (1 - (lightness - 0.7) * 1.5);
+        } else if (lightness < 0.3) {
+            // Slightly reduce chroma for very dark shades
+            adjustedChroma = oklchColor.c * (0.7 + lightness);
         }
 
-        const shadeRgb = hslToRGB(hsl.h, adjustedSat, lightness);
-        shades[shade] = convertRGBToHex(shadeRgb.r, shadeRgb.g, shadeRgb.b);
+        shades[shade] = oklchToHex(lightness, adjustedChroma, oklchColor.h);
     }
 
     return shades;
