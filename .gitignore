@@ -35,3 +35,4 @@ build/
 .next/
 out/
 .env*
+package-lock.json
