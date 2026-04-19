@@ -63,7 +63,7 @@ importers:
         specifier: ^3.3.3
         version: 3.3.4(webpack@5.105.4)
       vite:
-        specifier: ^8.0.8
+        specifier: '>=8.0.5'
         version: 8.0.8(@types/node@25.6.0)(terser@5.46.1)
       vitest:
         specifier: ^4.1.4
