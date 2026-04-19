@@ -35,4 +35,5 @@ build/
 .next/
 out/
 .env*
+!.env.example
 package-lock.json

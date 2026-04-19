@@ -8,11 +8,13 @@
     "build": "webpack --mode production",
     "biome:check": "biome check .",
     "biome:fix": "biome check . --write",
-    "biome:format": "biome format . --write"
+    "biome:format": "biome format . --write",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "culori": "^4.0.2",
-    "posthog-js": "^1.364.1",
+    "posthog-js": "^1.369.3",
     "webpack": "^5.104.1",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.2.1"
@@ -23,9 +25,11 @@
     "@biomejs/biome": "^2.4.9",
     "babel-loader": "^9.1.2",
     "css-loader": "^6.8.1",
+    "dotenv": "^17.4.2",
     "jsdom": "^29.0.1",
     "style-loader": "^3.3.3",
-    "vitest": "^4.1.2"
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4"
   },
   "license": "MIT",
   "private": false,
@@ -39,7 +43,10 @@
       "minimatch": ">=3.1.4",
       "serialize-javascript": ">=7.0.5",
       "path-to-regexp": ">=0.1.13",
-      "vite": ">=8.0.5"
+      "vite": ">=8.0.5",
+      "protobufjs": ">=7.5.5",
+      "dompurify": ">=3.4.0",
+      "follow-redirects": ">=1.16.0"
     }
   }
 }

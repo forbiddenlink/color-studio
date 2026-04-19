@@ -17,4 +17,9 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm biome:check
       - run: pnpm run build
+      - run: pnpm vitest run
+        continue-on-error: true
+      - run: pnpm audit --audit-level=high
+        continue-on-error: true
