@@ -14,21 +14,21 @@
   },
   "dependencies": {
     "culori": "^4.0.2",
-    "posthog-js": "^1.369.3",
-    "webpack": "^5.104.1",
+    "posthog-js": "^1.382.0",
+    "webpack": "^5.107.2",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.2.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.22.5",
-    "@babel/preset-env": "^7.22.5",
-    "@biomejs/biome": "^2.4.9",
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@biomejs/biome": "^2.4.16",
     "babel-loader": "^9.1.2",
     "css-loader": "^6.8.1",
     "dotenv": "^17.4.2",
-    "jsdom": "^29.0.1",
+    "jsdom": "^29.1.1",
     "style-loader": "^3.3.3",
-    "vite": "^8.0.8",
+    "vite": "^8.0.16",
     "vitest": "^4.1.7"
   },
   "license": "MIT",
