@@ -2880,10 +2880,12 @@ splitComplementaryBtn.addEventListener('click', () => {
   displayColorScheme([currentColor.hex, ...splitComp])
 })
 
-squareBtn.addEventListener('click', () => {
-  const square = getSquareColorsOklch(currentColor.oklch)
-  displayColorScheme([currentColor.hex, ...square])
-})
+if (squareBtn) {
+  squareBtn.addEventListener('click', () => {
+    const square = getSquareColorsOklch(currentColor.oklch)
+    displayColorScheme([currentColor.hex, ...square])
+  })
+}
 
 compoundBtn.addEventListener('click', () => {
   const compound = getCompoundColorsOklch(currentColor.oklch)
@@ -2983,6 +2985,8 @@ function generateGradientCSS() {
   // This produces smoother, more vibrant gradients without muddy middle colors
   if (gradientState.type === 'linear') {
     return `linear-gradient(in oklch ${gradientState.angle}deg, ${colorStops})`
+  } else if (gradientState.type === 'conic') {
+    return `conic-gradient(in oklch from ${gradientState.angle}deg, ${colorStops})`
   } else {
     return `radial-gradient(in oklch circle, ${colorStops})`
   }
@@ -3020,6 +3024,7 @@ function updateGradientPreview() {
 function initGradientGenerator() {
   const linearBtn = document.getElementById('linearGradientBtn')
   const radialBtn = document.getElementById('radialGradientBtn')
+  const conicBtn = document.getElementById('conicGradientBtn')
   const angleSlider = document.getElementById('gradientAngle')
   const angleText = document.getElementById('gradientAngleText')
   const angleControl = document.getElementById('gradientAngleControl')
@@ -3028,21 +3033,20 @@ function initGradientGenerator() {
   if (!linearBtn || !radialBtn || !angleSlider) return
 
   // Type toggle buttons
-  linearBtn.addEventListener('click', () => {
-    gradientState.type = 'linear'
-    linearBtn.classList.add('active')
-    radialBtn.classList.remove('active')
-    if (angleControl) angleControl.classList.remove('hidden')
+  const setActiveType = (type, activeBtn, showAngle) => {
+    gradientState.type = type
+    for (const btn of [linearBtn, radialBtn, conicBtn]) {
+      if (btn) btn.classList.toggle('active', btn === activeBtn)
+    }
+    if (angleControl) angleControl.classList.toggle('hidden', !showAngle)
     updateGradientPreview()
-  })
+  }
 
-  radialBtn.addEventListener('click', () => {
-    gradientState.type = 'radial'
-    radialBtn.classList.add('active')
-    linearBtn.classList.remove('active')
-    if (angleControl) angleControl.classList.add('hidden')
-    updateGradientPreview()
-  })
+  linearBtn.addEventListener('click', () => setActiveType('linear', linearBtn, true))
+  radialBtn.addEventListener('click', () => setActiveType('radial', radialBtn, false))
+  if (conicBtn) {
+    conicBtn.addEventListener('click', () => setActiveType('conic', conicBtn, true))
+  }
 
   // Angle slider
   angleSlider.addEventListener('input', () => {
@@ -3079,6 +3083,267 @@ displayColorScheme = function (...args) {
   updateGradientPreview()
 }
 
+// ==========================================
+// SHADER BACKGROUND GENERATOR (palette-driven WebGL)
+// ==========================================
+// HueGrid-inspired animated backgrounds, but seeded from YOUR palette.
+// Four presets (Aurora, Mesh, Plasma, Waves). Respects prefers-reduced-motion.
+
+const SHADER_PRESETS = ['aurora', 'mesh', 'plasma', 'waves']
+
+const shaderState = {
+  preset: 0,
+  speed: 1,
+  raf: null,
+  gl: null,
+  program: null,
+  uniforms: null,
+  startTime: 0,
+}
+
+// Collect up to 5 palette colors as normalized RGB, padded to 5
+function getShaderPalette() {
+  const hexes = []
+  const schemeColorsEl = document.getElementById('schemeColors')
+  const schemeDivs = schemeColorsEl ? schemeColorsEl.querySelectorAll('.history-color') : []
+  if (schemeDivs.length >= 2) {
+    for (const div of schemeDivs) hexes.push(rgbToHex(div.style.backgroundColor))
+  } else {
+    hexes.push(currentColor.hex)
+    hexes.push(rgbToHex(alteredColor.style.backgroundColor))
+  }
+
+  const colors = hexes.slice(0, 5).map((hex) => {
+    const { r, g, b } = convertHexToRGB(hex)
+    return [r / 255, g / 255, b / 255]
+  })
+  const count = Math.max(2, colors.length)
+  const last = colors[colors.length - 1]
+  while (colors.length < 5) colors.push(last)
+  return { flat: colors.flat(), count }
+}
+
+const SHADER_VERT = `
+attribute vec2 aPos;
+void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
+`
+
+const SHADER_FRAG = `
+precision highp float;
+uniform vec2 uRes;
+uniform float uTime;
+uniform int uPreset;
+uniform int uCount;
+uniform vec3 uColors[5];
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float noise(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = hash(i), b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0)), d = hash(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float fbm(vec2 p) {
+  float v = 0.0; float a = 0.5;
+  for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.0; a *= 0.5; }
+  return v;
+}
+vec3 palette(float t) {
+  t = clamp(t, 0.0, 1.0) * (float(uCount - 1) - 0.0001);
+  vec3 col = uColors[0];
+  for (int k = 0; k < 4; k++) {
+    if (float(k) <= t && t < float(k + 1)) {
+      col = mix(uColors[k], uColors[k + 1], t - float(k));
+    }
+  }
+  return col;
+}
+void main() {
+  vec2 uv = gl_FragCoord.xy / uRes;
+  float t = uTime;
+  vec3 col;
+  if (uPreset == 0) {
+    float n = fbm(vec2(uv.x * 3.0, uv.y * 2.0 - t * 0.15));
+    float bands = fbm(vec2(uv.x * 2.0 + t * 0.1, uv.y * 4.0 + n * 2.0));
+    col = palette(bands);
+  } else if (uPreset == 1) {
+    float m = sin(uv.x * 3.0 + t * 0.3) + sin(uv.y * 3.0 + t * 0.4) + sin((uv.x + uv.y) * 2.0 + t * 0.2);
+    m = m / 3.0 * 0.5 + 0.5;
+    float n = fbm(uv * 2.0 + t * 0.05);
+    col = palette(m * 0.7 + n * 0.3);
+  } else if (uPreset == 2) {
+    float v = sin(uv.x * 10.0 + t) + sin((uv.y * 10.0 + t) * 0.5) + sin((uv.x * 10.0 + uv.y * 10.0 + t) * 0.5);
+    vec2 c = uv * 5.0;
+    v += sin(sqrt(c.x * c.x + c.y * c.y + 1.0) + t);
+    v = v * 0.25 * 0.5 + 0.5;
+    col = palette(v);
+  } else {
+    float w = 0.5 + 0.5 * sin(uv.x * 6.2831 + t * 0.5 + fbm(uv * 3.0) * 3.0);
+    float y = uv.y + 0.15 * sin(uv.x * 4.0 + t * 0.3);
+    col = palette(mix(w, y, 0.5));
+  }
+  gl_FragColor = vec4(col, 1.0);
+}
+`
+
+function compileShader(gl, type, src) {
+  const shader = gl.createShader(type)
+  gl.shaderSource(shader, src)
+  gl.compileShader(shader)
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error('Shader compile error:', gl.getShaderInfoLog(shader))
+    gl.deleteShader(shader)
+    return null
+  }
+  return shader
+}
+
+function setupShaderProgram(gl) {
+  const vert = compileShader(gl, gl.VERTEX_SHADER, SHADER_VERT)
+  const frag = compileShader(gl, gl.FRAGMENT_SHADER, SHADER_FRAG)
+  if (!vert || !frag) return null
+  const program = gl.createProgram()
+  gl.attachShader(program, vert)
+  gl.attachShader(program, frag)
+  gl.linkProgram(program)
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error('Program link error:', gl.getProgramInfoLog(program))
+    return null
+  }
+  // Full-screen quad
+  const buffer = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW)
+  const aPos = gl.getAttribLocation(program, 'aPos')
+  gl.enableVertexAttribArray(aPos)
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
+  gl.useProgram(program)
+  return {
+    program,
+    uniforms: {
+      uRes: gl.getUniformLocation(program, 'uRes'),
+      uTime: gl.getUniformLocation(program, 'uTime'),
+      uPreset: gl.getUniformLocation(program, 'uPreset'),
+      uCount: gl.getUniformLocation(program, 'uCount'),
+      uColors: gl.getUniformLocation(program, 'uColors'),
+    },
+  }
+}
+
+function renderShaderFrame(timeSeconds) {
+  const { gl, uniforms } = shaderState
+  if (!gl || !uniforms) return
+  const canvas = gl.canvas
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  const w = Math.floor(canvas.clientWidth * dpr)
+  const h = Math.floor(canvas.clientHeight * dpr)
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w
+    canvas.height = h
+    gl.viewport(0, 0, w, h)
+  }
+  const { flat, count } = getShaderPalette()
+  gl.uniform2f(uniforms.uRes, w, h)
+  gl.uniform1f(uniforms.uTime, timeSeconds)
+  gl.uniform1i(uniforms.uPreset, shaderState.preset)
+  gl.uniform1i(uniforms.uCount, count)
+  gl.uniform3fv(uniforms.uColors, flat)
+  gl.drawArrays(gl.TRIANGLES, 0, 3)
+}
+
+function startShaderLoop() {
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (shaderState.raf) cancelAnimationFrame(shaderState.raf)
+  if (prefersReduced) {
+    renderShaderFrame(8) // static, visually settled frame
+    return
+  }
+  shaderState.startTime = performance.now()
+  const loop = (now) => {
+    const elapsed = ((now - shaderState.startTime) / 1000) * shaderState.speed
+    renderShaderFrame(elapsed)
+    shaderState.raf = requestAnimationFrame(loop)
+  }
+  shaderState.raf = requestAnimationFrame(loop)
+}
+
+function downloadShaderPNG() {
+  const { gl } = shaderState
+  if (!gl) return
+  // Render fresh so the buffer is current, then capture
+  renderShaderFrame((performance.now() - shaderState.startTime) / 1000 * shaderState.speed)
+  gl.canvas.toBlob((blob) => {
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `color-studio-${SHADER_PRESETS[shaderState.preset]}.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    showToast('Shader background downloaded')
+  }, 'image/png')
+}
+
+function initShaderBackground() {
+  const canvas = document.getElementById('shaderCanvas')
+  if (!canvas) return
+  const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true })
+  if (!gl) {
+    const section = document.getElementById('shaderSection')
+    if (section) section.classList.add('hidden')
+    return
+  }
+  const setup = setupShaderProgram(gl)
+  if (!setup) return
+  shaderState.gl = gl
+  shaderState.program = setup.program
+  shaderState.uniforms = setup.uniforms
+
+  // Preset buttons
+  const presetBtns = document.querySelectorAll('.shader-preset-btn')
+  for (const btn of presetBtns) {
+    btn.addEventListener('click', () => {
+      shaderState.preset = parseInt(btn.dataset.preset, 10)
+      for (const b of presetBtns) b.classList.toggle('active', b === btn)
+      startShaderLoop()
+    })
+  }
+
+  // Speed slider
+  const speedSlider = document.getElementById('shaderSpeed')
+  const speedLabel = document.getElementById('shaderSpeedText')
+  if (speedSlider) {
+    speedSlider.addEventListener('input', () => {
+      shaderState.speed = parseInt(speedSlider.value, 10) / 100
+      if (speedLabel) speedLabel.textContent = `Speed: ${shaderState.speed.toFixed(1)}x`
+    })
+  }
+
+  // Download
+  const downloadBtn = document.getElementById('shaderDownloadBtn')
+  if (downloadBtn) downloadBtn.addEventListener('click', downloadShaderPNG)
+
+  // Pause animation when offscreen (battery / perf)
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          startShaderLoop()
+        } else if (shaderState.raf) {
+          cancelAnimationFrame(shaderState.raf)
+          shaderState.raf = null
+        }
+      }
+    })
+    io.observe(canvas)
+  } else {
+    startShaderLoop()
+  }
+}
+
 // Random Palette Button
 const randomPaletteBtn = document.getElementById('randomPaletteBtn')
 if (randomPaletteBtn) {
@@ -3106,6 +3371,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize gradient generator
   initGradientGenerator()
+
+  // Initialize palette-driven shader background
+  initShaderBackground()
 })
 
 // ==========================================

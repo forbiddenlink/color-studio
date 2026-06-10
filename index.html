@@ -331,6 +331,9 @@
                 <button type="button" id="radialGradientBtn" class="button gradient-type-btn">
                   Radial
                 </button>
+                <button type="button" id="conicGradientBtn" class="button gradient-type-btn">
+                  Conic
+                </button>
               </div>
               <div class="gradient-angle-control" id="gradientAngleControl">
                 <label
@@ -359,6 +362,50 @@
               >
               <button type="button" id="copyGradientBtn" class="button button--success">
                 Copy
+              </button>
+            </div>
+          </div>
+
+          <!-- Shader Background (palette-driven WebGL) -->
+          <div class="shader-section tool-section" id="shaderSection">
+            <h3>Shader Background</h3>
+            <p class="shader-hint">Animated backgrounds generated live from your palette. Export a frame as PNG.</p>
+            <div class="shader-controls">
+              <div class="shader-preset-toggle">
+                <button type="button" class="button shader-preset-btn active" data-preset="0">
+                  Aurora
+                </button>
+                <button type="button" class="button shader-preset-btn" data-preset="1">
+                  Mesh
+                </button>
+                <button type="button" class="button shader-preset-btn" data-preset="2">
+                  Plasma
+                </button>
+                <button type="button" class="button shader-preset-btn" data-preset="3">
+                  Waves
+                </button>
+              </div>
+              <div class="shader-speed-control">
+                <label for="shaderSpeed" id="shaderSpeedText" class="slider-label"
+                  >Speed: 1.0x</label
+                >
+                <input
+                  type="range"
+                  min="0"
+                  max="300"
+                  value="100"
+                  class="slider"
+                  id="shaderSpeed"
+                  name="shaderSpeed"
+                />
+              </div>
+            </div>
+            <div class="shader-preview-container">
+              <canvas id="shaderCanvas" class="shader-canvas"></canvas>
+            </div>
+            <div class="shader-actions">
+              <button type="button" id="shaderDownloadBtn" class="button button--success">
+                Download PNG
               </button>
             </div>
           </div>
