@@ -3089,7 +3089,7 @@ displayColorScheme = function (...args) {
 // HueGrid-inspired animated backgrounds, but seeded from YOUR palette.
 // Four presets (Aurora, Mesh, Plasma, Waves). Respects prefers-reduced-motion.
 
-const SHADER_PRESETS = ['aurora', 'mesh', 'plasma', 'waves']
+const SHADER_PRESETS = ['aurora', 'mesh', 'plasma', 'waves', 'nebula', 'rings', 'dither']
 
 const shaderState = {
   preset: 0,
@@ -3178,10 +3178,22 @@ void main() {
     v += sin(sqrt(c.x * c.x + c.y * c.y + 1.0) + t);
     v = v * 0.25 * 0.5 + 0.5;
     col = palette(v);
-  } else {
+  } else if (uPreset == 3) {
     float w = 0.5 + 0.5 * sin(uv.x * 6.2831 + t * 0.5 + fbm(uv * 3.0) * 3.0);
     float y = uv.y + 0.15 * sin(uv.x * 4.0 + t * 0.3);
     col = palette(mix(w, y, 0.5));
+  } else if (uPreset == 4) {
+    vec2 q = vec2(fbm(uv * 2.0 + vec2(0.0, t * 0.05)), fbm(uv * 2.0 + vec2(3.1, 1.7 - t * 0.05)));
+    float n = fbm(uv * 3.0 + q * 2.0);
+    col = palette(n);
+  } else if (uPreset == 5) {
+    float d = distance(uv, vec2(0.5));
+    float rings = 0.5 + 0.5 * sin(d * 28.0 - t * 1.2);
+    col = palette(rings);
+  } else {
+    float n = fbm(uv * 4.0 + vec2(t * 0.1, -t * 0.07));
+    float bayer = mod(gl_FragCoord.x + gl_FragCoord.y, 2.0) * 0.06;
+    col = palette(floor((n + bayer) * 6.0) / 6.0);
   }
   gl_FragColor = vec4(col, 1.0);
 }
