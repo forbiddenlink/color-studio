@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "culori": "^4.0.2",
-    "posthog-js": "^1.386.6",
+    "posthog-js": "^1.391.7",
     "webpack": "^5.107.2",
     "webpack-cli": "^7.0.2",
     "webpack-dev-server": "^5.2.5"
@@ -22,7 +22,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@babel/preset-env": "^7.29.7",
-    "@biomejs/biome": "^2.5.0",
+    "@biomejs/biome": "^2.5.1",
     "babel-loader": "^10.1.1",
     "css-loader": "^7.1.4",
     "dotenv": "^17.4.2",
