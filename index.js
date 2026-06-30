@@ -3284,7 +3284,7 @@ function downloadShaderPNG() {
   const { gl } = shaderState
   if (!gl) return
   // Render fresh so the buffer is current, then capture
-  renderShaderFrame((performance.now() - shaderState.startTime) / 1000 * shaderState.speed)
+  renderShaderFrame(((performance.now() - shaderState.startTime) / 1000) * shaderState.speed)
   gl.canvas.toBlob((blob) => {
     if (!blob) return
     const url = URL.createObjectURL(blob)

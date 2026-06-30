@@ -95,7 +95,7 @@ self.addEventListener('fetch', (event) => {
       return fetch(request)
         .then((networkResponse) => {
           // Don't cache non-successful responses
-          if (!networkResponse || networkResponse.status !== 200) {
+          if (networkResponse?.status !== 200) {
             return networkResponse
           }
 
