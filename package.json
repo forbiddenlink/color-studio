@@ -17,11 +17,11 @@
     "posthog-js": "^1.399.2",
     "webpack": "^5.108.4",
     "webpack-cli": "^7.2.1",
-    "webpack-dev-server": "^5.2.6"
+    "webpack-dev-server": "^6.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
-    "@babel/preset-env": "^7.29.7",
+    "@babel/core": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
     "@biomejs/biome": "^2.5.4",
     "babel-loader": "^10.1.1",
     "css-loader": "^7.1.4",
@@ -42,7 +42,6 @@
       "ajv": ">=8.18.0",
       "minimatch": ">=3.1.4",
       "serialize-javascript": ">=7.0.5",
-      "path-to-regexp": "0.1.13",
       "vite": ">=8.0.5",
       "protobufjs": "^7.6.1",
       "dompurify": ">=3.4.13 <4",
