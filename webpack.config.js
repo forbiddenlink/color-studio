@@ -42,6 +42,9 @@ module.exports = {
   devServer: {
     static: {
       directory: path.join(__dirname, '/'),
+      watch: {
+        ignored: /node_modules|\.git/,
+      },
     },
     hot: true,
     open: true,
