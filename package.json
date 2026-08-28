@@ -6,9 +6,12 @@
     "start": "webpack serve --mode development",
     "watch": "webpack -w --mode development",
     "build": "webpack --mode production",
+    "check": "pnpm run biome:check && pnpm test && pnpm run build",
     "biome:check": "biome check .",
     "biome:fix": "biome check . --write",
     "biome:format": "biome format . --write",
+    "security": "pnpm audit --audit-level high",
+    "audit": "pnpm audit --audit-level high",
     "test": "vitest run",
     "test:watch": "vitest"
   },

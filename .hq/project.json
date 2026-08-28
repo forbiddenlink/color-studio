@@ -1,0 +1,29 @@
+{
+  "allowedForCodex": true,
+  "automationLevel": "manual",
+  "confidentialContext": "none",
+  "context": "personal",
+  "hosting": [],
+  "kind": "tool",
+  "lastReviewedAt": "2026-08-27",
+  "lifecycle": "prototype",
+  "notes": "Color/design tooling prototype. Candidate for reuse inside design audits, palette checks, and frontend polish workflows.",
+  "observability": [
+    "posthog"
+  ],
+  "ownerContext": "personal",
+  "source": "owned",
+  "surface": "internal",
+  "systems": [
+    "solo-control-tower",
+    "design-quality"
+  ],
+  "tags": [
+    "biome",
+    "posthog",
+    "vitest"
+  ],
+  "urls": {
+    "repository": "https://github.com/forbiddenlink/color-studio"
+  }
+}
