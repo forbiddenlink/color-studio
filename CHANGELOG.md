@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/forbiddenlink/color-studio/compare/v1.0.0...v1.0.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **ci:** remove hardcoded pnpm version to stop action-setup conflict ([#41](https://github.com/forbiddenlink/color-studio/issues/41)) ([c5c7da3](https://github.com/forbiddenlink/color-studio/commit/c5c7da3394a25c649c3e92f823b55e9bd0ed0486))
+* harden workflow supply chain ([5d4d272](https://github.com/forbiddenlink/color-studio/commit/5d4d27270a006425c6937d4b3410700b9cefacb2))
+
 ## 1.0.0 (2026-08-16)
 
 
