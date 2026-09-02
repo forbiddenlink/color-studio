@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.2](https://github.com/forbiddenlink/color-studio/compare/v1.0.1...v1.0.2) (2026-09-02)
+
+
+### Bug Fixes
+
+* **ci:** format renovate.json so biome:check passes ([7e6e5b3](https://github.com/forbiddenlink/color-studio/commit/7e6e5b360969b1fd4bf22372c7f4939b966d7c4b))
+* **ci:** let pnpm/action-setup read the version from packageManager ([eeffd3f](https://github.com/forbiddenlink/color-studio/commit/eeffd3faaaf7d97946a785729b8e51bf4e34eb6f))
+* **deps:** give every resolution override an upper bound ([60ce52c](https://github.com/forbiddenlink/color-studio/commit/60ce52c93462606857de1a06a82008e0e71b9b74))
+* **security:** pin transitive dependencies flagged by Dependabot ([cfd196b](https://github.com/forbiddenlink/color-studio/commit/cfd196bdb356b941120bb6c004e5e683b57027fb))
+
 ## [1.0.1](https://github.com/forbiddenlink/color-studio/compare/v1.0.0...v1.0.1) (2026-08-29)
 
 
