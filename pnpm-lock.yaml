@@ -50,7 +50,7 @@ importers:
         specifier: ^8.0.2
         version: 8.0.2(@babel/core@8.0.1)
       '@biomejs/biome':
-        specifier: ^2.5.12
+        specifier: 2.5.12
         version: 2.5.12
       babel-loader:
         specifier: ^10.1.1
