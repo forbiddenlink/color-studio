@@ -44,34 +44,34 @@ importers:
         version: 6.0.0(webpack-cli@7.2.3)(webpack@5.110.2)
     devDependencies:
       '@babel/core':
-        specifier: ^8.0.1
+        specifier: 8.0.1
         version: 8.0.1
       '@babel/preset-env':
-        specifier: ^8.0.2
+        specifier: 8.0.2
         version: 8.0.2(@babel/core@8.0.1)
       '@biomejs/biome':
         specifier: 2.5.12
         version: 2.5.12
       babel-loader:
-        specifier: ^10.1.1
+        specifier: 10.1.1
         version: 10.1.1(@babel/core@8.0.1)(webpack@5.110.2)
       css-loader:
-        specifier: ^7.1.5
+        specifier: 7.1.5
         version: 7.1.5(webpack@5.110.2)
       dotenv:
-        specifier: ^17.4.2
+        specifier: 17.4.2
         version: 17.4.2
       jsdom:
-        specifier: ^30.0.1
+        specifier: 30.0.1
         version: 30.0.1
       style-loader:
-        specifier: ^4.0.0
+        specifier: 4.0.0
         version: 4.0.0(webpack@5.110.2)
       vite:
         specifier: '>=8.0.5 <9'
         version: 8.2.2(@types/node@26.4.1)(terser@5.51.2)
       vitest:
-        specifier: ^4.1.11
+        specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1)(terser@5.51.2))
 
 packages:
