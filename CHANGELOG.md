@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/forbiddenlink/color-studio/compare/v1.0.2...v1.0.3) (2026-09-08)
+
+
+### Bug Fixes
+
+* **deps:** raise stale override floor(s) to the current patch ([#48](https://github.com/forbiddenlink/color-studio/issues/48)) ([9625593](https://github.com/forbiddenlink/color-studio/commit/96255935cafb33e3772ecc6109b329054f2f4099))
+
 ## [1.0.2](https://github.com/forbiddenlink/color-studio/compare/v1.0.1...v1.0.2) (2026-09-02)
 
 
