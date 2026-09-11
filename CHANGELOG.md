@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.4](https://github.com/forbiddenlink/color-studio/compare/v1.0.3...v1.0.4) (2026-09-11)
+
+
+### Bug Fixes
+
+* replaced every color-studio.vercel.app reference in index.html, robots.txt and sitemap.xml with the real production URL, color-studio-mu.vercel.app. These are static files with no build-time templating, so this is a direct literal fix. ([4f35f60](https://github.com/forbiddenlink/color-studio/commit/4f35f60594e298e3992304dcf162477f7c1f681d))
+* **seo:** correct canonical/og:url/robots/sitemap to the real production domain ([#56](https://github.com/forbiddenlink/color-studio/issues/56)) ([4f35f60](https://github.com/forbiddenlink/color-studio/commit/4f35f60594e298e3992304dcf162477f7c1f681d))
+
 ## [1.0.3](https://github.com/forbiddenlink/color-studio/compare/v1.0.2...v1.0.3) (2026-09-08)
 
 
