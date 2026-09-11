@@ -1,5 +1,5 @@
-# robots.txt for color-studio.vercel.app
+# robots.txt for color-studio-mu.vercel.app
 User-agent: *
 Allow: /
 
-Sitemap: https://color-studio.vercel.app/sitemap.xml
+Sitemap: https://color-studio-mu.vercel.app/sitemap.xml
