@@ -19,36 +19,52 @@ A modern color manipulation tool for designers and developers. Create, modify, a
 - **History** — Automatic color history with localStorage persistence
 - **Accessibility** — WCAG AA/AAA badges, dark mode, reduced motion support
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
-- Node.js 16+
-- npm or yarn
+- Node.js 18+
+- pnpm
 
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/color-studio.git
+git clone https://github.com/forbiddenlink/color-studio.git
 cd color-studio
-npm install
+pnpm install
 ```
 
 ### Development
 
 ```bash
-npm start
+pnpm start
 ```
 
-Open `http://localhost:8080` in your browser.
+Open `http://localhost:3000` in your browser.
 
-### Production Build
+### Production build
 
 ```bash
-npm run build
+pnpm build
 ```
 
 Output is generated in the `dist/` directory.
+
+### Other scripts
+
+```bash
+pnpm watch       # webpack in watch mode
+pnpm test        # vitest run
+pnpm test:watch
+pnpm check       # biome check + test + build
+pnpm biome:check / pnpm biome:fix / pnpm biome:format
+pnpm audit / pnpm security   # pnpm audit --audit-level high
+```
+
+### Env vars (optional)
+
+`NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` in `.env.local` enable PostHog
+analytics. See `CLAUDE.md` for how these get wired through webpack.
 
 ## Usage
 
