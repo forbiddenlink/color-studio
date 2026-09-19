@@ -98,7 +98,7 @@ let colorHistoryArray = (() => {
 })()
 
 // Color Names Database - Comprehensive (based on Name That Color algorithm)
-// This is a simplified version with ~150 carefully selected color names
+// This is a comprehensive version with 1883 carefully selected color names
 const colorNamesData = [
   ['000000', 'Black'],
   ['000080', 'Navy Blue'],
