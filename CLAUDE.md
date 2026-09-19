@@ -11,14 +11,13 @@ Live at https://color-studio-mu.vercel.app.
 - Webpack 5 + Babel for the production/dev build (NOT Vite, despite `vite`/`vitest`
   being devDependencies)
 - Vitest (jsdom environment) for unit tests
-- Biome 2.5.12 for lint/format
+- Biome 2.5.13 for lint/format
 - `culori` for color math, `posthog-js` for analytics
 - pnpm (see `packageManager: pnpm@10.34.5`)
 
 ## Commands
 
-- `pnpm start` - webpack-dev-server on port 3000 (README says 8080; the actual
-  config in `webpack.config.js` is 3000)
+- `pnpm start` - webpack-dev-server on port 3000 (per `webpack.config.js`)
 - `pnpm watch` - webpack in watch mode
 - `pnpm build` - production build to `dist/`
 - `pnpm test` / `pnpm test:watch` - vitest
@@ -31,9 +30,9 @@ Live at https://color-studio-mu.vercel.app.
 - `index.js` - entire app logic (color math, DOM wiring, export, history), ~157K
 - `index.html`, `index.css` - app shell and design tokens
 - `tests/color-math.test.js`, `tests/setup.js`
-- `public/` - not used for static assets; static files (favicon, manifest,
-  sitemap, robots.txt, service-worker.js) live at repo root and are copied into
-  `dist/` by the Vercel build command
+- No `public/` directory; static files (favicon, manifest, sitemap, robots.txt,
+  service-worker.js) live at repo root and are copied into `dist/` by the
+  Vercel build command
 
 ## Env vars
 
