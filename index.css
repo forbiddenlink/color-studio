@@ -1238,6 +1238,7 @@ input[type="color"]::-moz-color-swatch {
 
 .scale__ratio {
   opacity: 0.8;
+  white-space: pre-line;
 }
 
 @media (max-width: 860px) {
@@ -1246,6 +1247,27 @@ input[type="color"]::-moz-color-swatch {
   }
   .scale__step {
     min-height: 96px;
+  }
+}
+
+/* Phones: each step becomes a row, like a paint-chip strip */
+@media (max-width: 560px) {
+  .scale {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .scale__step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding: var(--s-2) var(--s-3);
+  }
+  .scale__step:hover {
+    transform: none;
+  }
+  .scale__ratio {
+    white-space: normal;
+    text-align: right;
   }
 }
 
@@ -1824,6 +1846,10 @@ input[type="color"]::-moz-color-swatch {
 
 .image-upload-copy {
   font-size: var(--step-1);
+}
+
+.image-upload-copy .link-btn {
+  font-size: inherit;
 }
 
 .image-thumb {

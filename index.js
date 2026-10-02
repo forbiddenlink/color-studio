@@ -2925,7 +2925,6 @@ function renderScaleInto(listEl, scale, label) {
       const meta = document.createElement('span')
       meta.className = 'scale__ratio'
       meta.textContent = `${hex}\n${onWhite.toFixed(1)} / ${onBlack.toFixed(1)}`
-      meta.style.whiteSpace = 'pre-line'
       btn.append(num, meta)
       btn.addEventListener('click', () => {
         copyToClipboard(hex, 'Copied', null)
@@ -4772,6 +4771,11 @@ function initColorblindSimulation() {
 
       // Set mode and update display
       currentColorblindMode = btn.dataset.mode
+      const simIndicator = document.getElementById('simIndicator')
+      if (simIndicator) {
+        simIndicator.hidden = currentColorblindMode === 'normal'
+        simIndicator.textContent = `Simulating ${btn.textContent.trim().toLowerCase()}`
+      }
 
       // If switching back to normal, restore original colors
       if (currentColorblindMode === 'normal') {
@@ -5076,66 +5080,41 @@ function exportPaletteAsImage() {
   canvas.height = HEIGHT
   const ctx = canvas.getContext('2d')
 
-  // Background
-  ctx.fillStyle = '#101014'
+  // Paper ground, matching the app's Specimen look
+  ctx.fillStyle = '#f7f6f2'
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
 
-  // Layout
-  const padding = 60
-  const topArea = 80
-  const bottomArea = 80
-  const swatchAreaTop = topArea + 30
-  const swatchAreaBottom = HEIGHT - bottomArea - 60
-  const swatchHeight = swatchAreaBottom - swatchAreaTop
-  const totalSwatchWidth = WIDTH - padding * 2
-  const gap = 16
-  const numColors = colors.length
-  const swatchWidth = (totalSwatchWidth - gap * (numColors - 1)) / numColors
-
-  // Draw swatches
+  // Full-bleed bands like the stage, with names set in each band's own ink
+  const pad = 48
+  const top = 48
+  const bottom = HEIGHT - 84
+  const bandWidth = (WIDTH - pad * 2) / colors.length
   colors.forEach((color, i) => {
-    const x = padding + i * (swatchWidth + gap)
-    const y = swatchAreaTop
-
-    // Swatch rectangle with rounded corners
-    const radius = 12
-    ctx.beginPath()
-    ctx.moveTo(x + radius, y)
-    ctx.lineTo(x + swatchWidth - radius, y)
-    ctx.quadraticCurveTo(x + swatchWidth, y, x + swatchWidth, y + radius)
-    ctx.lineTo(x + swatchWidth, y + swatchHeight - radius)
-    ctx.quadraticCurveTo(
-      x + swatchWidth,
-      y + swatchHeight,
-      x + swatchWidth - radius,
-      y + swatchHeight
-    )
-    ctx.lineTo(x + radius, y + swatchHeight)
-    ctx.quadraticCurveTo(x, y + swatchHeight, x, y + swatchHeight - radius)
-    ctx.lineTo(x, y + radius)
-    ctx.quadraticCurveTo(x, y, x + radius, y)
-    ctx.closePath()
+    const x = pad + i * bandWidth
     ctx.fillStyle = color.hex
-    ctx.fill()
+    ctx.fillRect(x, top, Math.ceil(bandWidth), bottom - top)
 
-    // Hex value below swatch
-    ctx.fillStyle = '#eeeef0'
-    ctx.font = '500 16px "JetBrains Mono", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText(color.hex.toUpperCase(), x + swatchWidth / 2, swatchAreaBottom + 24)
-
-    // Color name below hex
-    ctx.fillStyle = '#9090a0'
-    ctx.font = '400 13px "Inter", sans-serif'
-    const truncName = color.name.length > 16 ? `${color.name.slice(0, 15)}\u2026` : color.name
-    ctx.fillText(truncName, x + swatchWidth / 2, swatchAreaBottom + 44)
+    const ink = getBandInkColor(color.hex)
+    ctx.fillStyle = ink
+    ctx.textAlign = 'left'
+    ctx.font = '400 30px "Instrument Serif", Georgia, serif'
+    const name = color.name.length > 18 ? `${color.name.slice(0, 17)}\u2026` : color.name
+    ctx.fillText(name, x + 18, bottom - 46)
+    ctx.font = '500 16px "Geist Mono", ui-monospace, monospace'
+    ctx.fillText(color.hex.toLowerCase(), x + 18, bottom - 20)
   })
 
-  // Watermark at bottom
-  ctx.fillStyle = '#60606d'
-  ctx.font = '500 14px "Inter", sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText('Color Studio', WIDTH / 2, HEIGHT - 24)
+  // Wordmark
+  ctx.fillStyle = '#22201c'
+  ctx.textAlign = 'left'
+  ctx.font = '600 18px "Geist", system-ui, sans-serif'
+  ctx.fillText('Color', pad, HEIGHT - 34)
+  ctx.font = 'italic 400 22px "Instrument Serif", Georgia, serif'
+  ctx.fillText('Studio', pad + 52, HEIGHT - 34)
+  ctx.textAlign = 'right'
+  ctx.font = '400 13px "Geist Mono", ui-monospace, monospace'
+  ctx.fillStyle = '#6b6862'
+  ctx.fillText('color-studio-mu.vercel.app', WIDTH - pad, HEIGHT - 36)
 
   // Download
   canvas.toBlob((blob) => {
