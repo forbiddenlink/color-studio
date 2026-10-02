@@ -7,9 +7,9 @@ Dev server for screenshots: `npx webpack serve --mode development --port 3123 --
 ## Phases
 
 - [x] Phase 1: Understand the site (`profile.md`, `screenshots/before/`)
-- [→] Phase 2: Research (`references.md`, `features.md`)
-- [ ] Phase 3: Decide (`plan.md`)
-- [ ] Phase 4: Foundation + homepage
+- [x] Phase 2: Research (`references.md`, `features.md`)
+- [x] Phase 3: Decide (`plan.md`, `needs-approval.md`)
+- [→] Phase 4: Foundation + homepage
 - [ ] Phase 5: Roll out to every template
 - [ ] Phase 6: Verify
 - [ ] Phase 7: Report
@@ -21,3 +21,4 @@ Dev server for screenshots: `npx webpack serve --mode development --port 3123 --
 ## Log
 
 - 2026-10-02: Phase 1 done. Before screenshots: desktop + mobile default, random palette, invalid hex, image extracted, live production.
+- 2026-10-02: Phase 2 done (15 references, 10 competitors, 1 blocked: Kremer 403). Phase 3 done: direction "Specimen", features F1-F11.
