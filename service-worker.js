@@ -1,7 +1,7 @@
 // Service Worker for Color Studio PWA
 // Version: 1.0.0
 
-const CACHE_NAME = 'color-studio-v3'
+const CACHE_NAME = 'color-studio-v4'
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,11 +11,6 @@ const STATIC_ASSETS = [
   '/manifest.json',
 ]
 
-// External resources to cache
-const EXTERNAL_ASSETS = [
-  'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap',
-]
-
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -23,17 +18,9 @@ self.addEventListener('install', (event) => {
       .open(CACHE_NAME)
       .then((cache) => {
         console.log('[ServiceWorker] Caching static assets')
-        // Cache static assets first
-        return cache.addAll(STATIC_ASSETS).then(() => {
-          // Try to cache external assets, but don't fail if they're unavailable
-          return Promise.allSettled(
-            EXTERNAL_ASSETS.map((url) =>
-              cache.add(url).catch((err) => {
-                console.warn(`[ServiceWorker] Failed to cache external asset: ${url}`, err)
-              })
-            )
-          )
-        })
+        // Same-origin only: the CSP's connect-src 'self' blocks fetch() to font hosts
+        // from inside the worker, so third-party assets are left to the browser
+        return cache.addAll(STATIC_ASSETS)
       })
       .then(() => {
         // Skip waiting to activate immediately
@@ -74,8 +61,27 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Skip Chrome extension requests and non-http(s) requests
-  if (!url.protocol.startsWith('http')) {
+  // Leave cross-origin requests (Google Fonts) to the browser. Proxying them
+  // through the worker fails under connect-src 'self' and served a 503, which
+  // made returning visitors fall back to system fonts.
+  if (url.origin !== self.location.origin) {
+    return
+  }
+
+  // Pages: network first, so a new deploy shows on the next visit instead of
+  // one visit late; the cached copy is the offline fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse?.status === 200) {
+            const copy = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          }
+          return networkResponse
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html')))
+    )
     return
   }
 
