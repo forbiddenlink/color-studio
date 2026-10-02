@@ -14,6 +14,7 @@ import {
   parsePaletteInput,
   readLibrary,
   removeFromLibrary,
+  resizePalette,
   saveToLibrary,
   themeToCss,
   themeToDtcg,
@@ -3775,7 +3776,9 @@ function initKeyboardShortcuts() {
   // Undo/Redo shortcuts (work even in inputs)
   document.addEventListener('keydown', (e) => {
     const isMod = e.metaKey || e.ctrlKey
-    if (isMod && e.key.toLowerCase() === 'z') {
+    // Inside a dialog (band editor, library, export) Cmd/Ctrl+Z belongs to the
+    // text field; palette undo there would shift the editor's band index
+    if (isMod && e.key.toLowerCase() === 'z' && !document.querySelector('dialog[open]')) {
       e.preventDefault()
       if (e.shiftKey) {
         redo()
@@ -3795,6 +3798,11 @@ function initKeyboardShortcuts() {
       activeElement.isContentEditable
 
     if (isTyping) return
+    // Dialogs own the keyboard while open; on buttons and links Space activates
+    // the control, it must not reshuffle the palette
+    if (document.querySelector('dialog[open]')) return
+    if (e.key === ' ' && e.target.closest?.('button, a, select, summary')) return
+    if (e.metaKey || e.ctrlKey) return
 
     switch (e.key.toLowerCase()) {
       case ' ': // Space = Generate random palette
@@ -3934,13 +3942,19 @@ function generateRandomPalette() {
   const baseHex = isColorLocked
     ? currentColor.hex
     : oklchToHex(0.55 + Math.random() * 0.25, 0.07 + Math.random() * 0.11, Math.random() * 360)
-  const fresh = generateDefaultPalette(baseHex, 18 + Math.random() * 40)
   const previous = getPaletteHexes()
-  const locks = paletteLocks.slice()
-  const merged = fresh.map((hex, i) => (locks[i] && previous[i] ? previous[i] : hex))
+  // Keep the palette's current size (bands added or removed by the user) so
+  // locks past the fifth band survive
+  const fitted = resizePalette(
+    generateDefaultPalette(baseHex, 18 + Math.random() * 40),
+    previous.length || 5,
+    2
+  )
+  const locks = fitted.colors.map((_, i) => Boolean(paletteLocks[i]))
+  const merged = fitted.colors.map((hex, i) => (locks[i] && previous[i] ? previous[i] : hex))
 
   if (!isColorLocked) {
-    const nextBase = merged[2]
+    const nextBase = merged[fitted.baseIndex]
     hexInput.value = nextBase
     colorPicker.value = nextBase
     updateInputColor(nextBase)
@@ -5043,7 +5057,7 @@ function loadFromURL() {
           .split('-')
           .map((h) => normalizeHex(h))
           .filter(Boolean)
-          .slice(0, 12)
+          .slice(0, MAX_PALETTE)
         // filter(Boolean) first: ''.split('.') is [''], and Number('') is 0, which
         // used to lock band 1 on every link that had no lock param
         const lockSet = new Set((params.get('lock') || '').split('.').filter(Boolean).map(Number))
@@ -5919,6 +5933,8 @@ function removeEditedBand() {
   if (colors.length <= MIN_PALETTE) return
   const i = bandEditor.index
   const removed = colors[i]
+  // A pending live-preview frame would write into the band that slides into slot i
+  cancelAnimationFrame(bandEditor.frame)
   bandEditor.startHex = null
   bandEditor.index = -1
   document.getElementById('bandEditor')?.close()
@@ -6117,14 +6133,20 @@ function initLibrary() {
     if (!store) return
     const nameInput = document.getElementById('librarySaveName')
     const name = (nameInput?.value || '').trim().slice(0, 60) || 'Untitled palette'
-    saveToLibrary(store, {
-      id: `p${Date.now().toString(36)}`,
-      name,
-      colors: getPaletteHexes(),
-      locks: paletteLocks.slice(),
-      base: currentColor.hex.toLowerCase(),
-      savedAt: Date.now(),
-    })
+    try {
+      saveToLibrary(store, {
+        id: `p${Date.now().toString(36)}`,
+        name,
+        colors: getPaletteHexes(),
+        locks: paletteLocks.slice(),
+        base: currentColor.hex.toLowerCase(),
+        savedAt: Date.now(),
+      })
+    } catch {
+      // Quota exceeded or storage blocked mid-session
+      showToast('Could not save: browser storage is full or blocked')
+      return
+    }
     renderLibraryList()
     showToast(`Saved ${name}`)
   })

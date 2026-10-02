@@ -13,6 +13,7 @@ import {
   parsePaletteInput,
   readLibrary,
   removeFromLibrary,
+  resizePalette,
   saveToLibrary,
   THEME_ROLES,
   themeToCss,
@@ -133,6 +134,27 @@ describe('palette editing helpers', () => {
   })
   it('toHex returns null for garbage', () => {
     expect(toHex('not a color')).toBeNull()
+  })
+})
+
+describe('resizePalette', () => {
+  const five = ['#111111', '#222222', '#333333', '#444444', '#555555']
+  it('keeps five as-is', () => {
+    expect(resizePalette(five, 5, 2)).toEqual({ colors: five, baseIndex: 2 })
+  })
+  it('shrinks around the base', () => {
+    for (const n of [2, 3, 4]) {
+      const r = resizePalette(five, n, 2)
+      expect(r.colors).toHaveLength(n)
+      expect(r.colors[r.baseIndex]).toBe('#333333')
+    }
+  })
+  it('extends past five up to the maximum', () => {
+    const r = resizePalette(five, 8, 2)
+    expect(r.colors).toHaveLength(8)
+    expect(r.colors.slice(0, 5)).toEqual(five)
+    expect(r.baseIndex).toBe(2)
+    expect(resizePalette(five, 50, 2).colors).toHaveLength(MAX_PALETTE)
   })
 })
 
