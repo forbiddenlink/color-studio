@@ -49,7 +49,8 @@
       "!**/.hq",
       "!**/coverage",
       "!**/*.min.js",
-      "!**/public"
+      "!**/public",
+      "!design-research"
     ]
   }
 }

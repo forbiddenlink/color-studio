@@ -2632,7 +2632,6 @@ function normalizeHex(value) {
 }
 
 function displayColorScheme(rawColors, locks) {
-  // Only validated hex strings reach innerHTML below
   const colors = rawColors.map(normalizeHex).filter(Boolean)
   paletteLocks = colors.map((_, i) => Boolean(locks?.[i]))
   schemeColors.innerHTML = ''
@@ -2648,19 +2647,29 @@ function displayColorScheme(rawColors, locks) {
     band.classList.toggle('is-locked', paletteLocks[i])
     band.setAttribute('role', 'group')
     band.setAttribute('aria-label', `${name}, ${hex}`)
+    // Static markup only; every palette-derived value goes in via textContent/attributes
     band.innerHTML = `
       <div class="band__top">
-        <span class="band__index">${String(i + 1).padStart(2, '0')}</span>
+        <span class="band__index"></span>
         <div class="band__tools">
-          <button type="button" class="band__tool" data-action="copy" aria-label="Copy ${hex}" title="Copy hex">${ICON_COPY}</button>
-          <button type="button" class="band__tool" data-action="lock" aria-pressed="${paletteLocks[i]}" aria-label="Lock ${name}" title="Lock: keep on Shuffle">${paletteLocks[i] ? ICON_LOCK : ICON_UNLOCK}</button>
+          <button type="button" class="band__tool" data-action="copy" title="Copy hex">${ICON_COPY}</button>
+          <button type="button" class="band__tool" data-action="lock" title="Lock: keep on Shuffle">${paletteLocks[i] ? ICON_LOCK : ICON_UNLOCK}</button>
         </div>
       </div>
       <div class="band__meta">
-        <button type="button" class="band__name" title="Use as base color">${name}</button>
-        <span class="band__hex">${hex}</span>
-        <span class="band__oklch">${formatOklchString(hexToOklch(hex))}</span>
+        <button type="button" class="band__name" title="Use as base color"></button>
+        <span class="band__hex"></span>
+        <span class="band__oklch"></span>
       </div>`
+    band.querySelector('.band__index').textContent = String(i + 1).padStart(2, '0')
+    band.querySelector('.band__name').textContent = name
+    band.querySelector('.band__hex').textContent = hex
+    band.querySelector('.band__oklch').textContent = formatOklchString(hexToOklch(hex))
+    const copyTool = band.querySelector('[data-action="copy"]')
+    copyTool.setAttribute('aria-label', `Copy ${hex}`)
+    const lockTool = band.querySelector('[data-action="lock"]')
+    lockTool.setAttribute('aria-pressed', String(paletteLocks[i]))
+    lockTool.setAttribute('aria-label', `Lock ${name}`)
     band.querySelector('.band__name').addEventListener('click', () => useAsBase(hex))
     band.querySelector('[data-action="copy"]').addEventListener('click', () => {
       copyToClipboard(hex, 'Copied', null)
