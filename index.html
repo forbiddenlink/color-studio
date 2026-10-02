@@ -76,7 +76,9 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="index.css" />
+    <!-- ?v matches the service worker cache version: the v4 worker served these
+         cache-first, so a new URL is what makes returning visitors fetch them -->
+    <link rel="stylesheet" href="index.css?v=5" />
 
     <script type="application/ld+json">
     {
@@ -125,6 +127,12 @@
         </fieldset>
 
         <div class="masthead__actions">
+          <button type="button" id="eyedropperBtn" class="icon-btn" aria-label="Pick a color from the screen" title="Pick from screen" hidden>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 2.5a1.4 1.4 0 0 0-2 0L9.8 4.2 9 3.4 7.9 4.5l3.6 3.6 1.1-1.1-.8-.8 1.7-1.7a1.4 1.4 0 0 0 0-2z"/><path d="M8.6 5.2L3 10.8V13h2.2l5.6-5.6"/></svg>
+          </button>
+          <button type="button" id="openLibrary" class="icon-btn" aria-haspopup="dialog" aria-label="Saved palettes and import" title="Library">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M4 2h8v12l-4-2.8L4 14z"/></svg>
+          </button>
           <button type="button" id="undoBtn" class="icon-btn" disabled aria-label="Undo" title="Undo (Ctrl+Z)">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6a4 4 0 0 1 0 8H7"/><path d="M6 10L3 7l3-3"/></svg>
           </button>
@@ -181,7 +189,7 @@
             </div>
           </div>
           <p class="stage__hint">
-            Click a name to make it the base. <kbd>L</kbd> locks the base color.
+            Click a name to make it the base. Drag bands to reorder. <kbd>L</kbd> locks the base color.
             <span id="lockIndicator" class="lock-indicator">Base unlocked</span>
             <span id="simIndicator" class="lock-indicator active" hidden></span>
           </p>
@@ -336,7 +344,22 @@
               <button type="button" class="segmented__opt colorblind-btn" data-mode="deuteranopia" aria-pressed="false">Deuteranopia</button>
               <button type="button" class="segmented__opt colorblind-btn" data-mode="tritanopia" aria-pressed="false">Tritanopia</button>
             </fieldset>
-            <p class="hint">Applies to the palette, the adjust swatches and the previews.</p>
+            <p class="hint">Applies to the palette, the adjust swatches, the contrast grid and the previews.</p>
+          </div>
+
+          <div class="cgrid-section">
+            <div class="cgrid-section__head">
+              <span class="label" id="contrastGridLabel">Every pair in the palette</span>
+              <fieldset class="segmented" id="contrastMetric" aria-label="Contrast method">
+                <button type="button" class="segmented__opt active" data-metric="wcag" aria-pressed="true">WCAG 2</button>
+                <button type="button" class="segmented__opt" data-metric="apca" aria-pressed="false">APCA</button>
+              </fieldset>
+            </div>
+            <p class="hint" id="contrastGridSummary" aria-live="polite"></p>
+            <div class="cgrid-scroll">
+              <table id="contrastGrid" class="cgrid" aria-labelledby="contrastGridLabel"></table>
+            </div>
+            <p class="hint">Rows are text, columns are backgrounds. Select a cell to open the pair in the checker. APCA is the candidate method for WCAG 3; Lc 60 is the guide for readable text.</p>
           </div>
         </div>
       </section>
@@ -589,14 +612,17 @@
         <button type="button" role="tab" class="tab" aria-selected="false" data-format="shadcn" id="exportShadcn">shadcn/ui</button>
         <button type="button" role="tab" class="tab" aria-selected="false" data-format="daisyui" id="exportDaisyui">DaisyUI</button>
         <button type="button" role="tab" class="tab" aria-selected="false" data-format="bootstrap" id="exportBootstrap">Bootstrap</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="theme" id="exportTheme">Theme</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="tokens" id="exportTokens">Design tokens</button>
       </div>
       <div class="sheet__options">
         <fieldset class="segmented" aria-label="Color notation" id="exportModeGroup">
           <button type="button" class="segmented__opt active" data-mode="hex" aria-pressed="true">hex</button>
           <button type="button" class="segmented__opt" data-mode="oklch" aria-pressed="false">oklch</button>
         </fieldset>
-        <span class="hint" id="exportModeHint">Notation applies to CSS, SCSS, JSON and Tailwind v4.</span>
+        <span class="hint" id="exportModeHint">Notation applies to CSS, SCSS, JSON, Tailwind v4, Theme and Design tokens.</span>
       </div>
+      <div class="theme-preview" id="exportThemePreview" hidden></div>
       <pre class="code-block"><code id="exportCode"></code></pre>
       <div class="sheet__actions">
         <button type="button" id="exportCopy" class="btn btn--primary">Copy code</button>
@@ -610,6 +636,74 @@
       </div>
     </dialog>
 
-    <script defer src="index.js"></script>
+    <!-- ============ Band editor ============ -->
+    <dialog id="bandEditor" class="sheet sheet--narrow" aria-labelledby="bandEditorTitle">
+      <div class="sheet__head">
+        <h2 id="bandEditorTitle" class="sheet__title">Color</h2>
+        <button type="button" id="closeBandEditor" class="icon-btn" aria-label="Close editor">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>
+        </button>
+      </div>
+      <div class="editor__swatch" id="editSwatch"><span id="editName" class="editor__name"></span></div>
+      <div class="editor__hex">
+        <label for="editHex" class="label">Hex</label>
+        <input type="text" id="editHex" spellcheck="false" autocomplete="off" />
+        <button type="button" id="editEyedropper" class="btn btn--outline btn--sm" hidden>Pick from screen</button>
+      </div>
+      <div class="editor__sliders">
+        <div class="control">
+          <div class="control__head"><label for="editL" class="control__label">Lightness</label><output id="editLOut" for="editL"></output></div>
+          <input type="range" id="editL" class="slider" min="0" max="100" step="0.1" />
+        </div>
+        <div class="control">
+          <div class="control__head"><label for="editC" class="control__label">Chroma</label><output id="editCOut" for="editC"></output></div>
+          <input type="range" id="editC" class="slider slider--chroma" min="0" max="0.37" step="0.001" />
+        </div>
+        <div class="control">
+          <div class="control__head"><label for="editH" class="control__label">Hue</label><output id="editHOut" for="editH"></output></div>
+          <input type="range" id="editH" class="slider slider--hue" min="0" max="360" step="1" />
+        </div>
+      </div>
+      <p class="editor__gamut" id="editGamut" aria-live="polite"></p>
+      <div class="sheet__actions editor__actions">
+        <button type="button" id="editMoveLeft" class="btn btn--outline btn--sm">Move left</button>
+        <button type="button" id="editMoveRight" class="btn btn--outline btn--sm">Move right</button>
+        <button type="button" id="editRemove" class="btn btn--outline btn--sm editor__remove">Remove</button>
+        <button type="button" id="editDone" class="btn btn--primary btn--sm">Done</button>
+      </div>
+    </dialog>
+
+    <!-- ============ Library ============ -->
+    <dialog id="libraryDialog" class="sheet" aria-labelledby="libraryTitle">
+      <div class="sheet__head">
+        <h2 id="libraryTitle" class="sheet__title">Your <em>palettes</em></h2>
+        <button type="button" id="closeLibrary" class="icon-btn" aria-label="Close library">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>
+        </button>
+      </div>
+      <form id="librarySaveForm" class="library__form">
+        <label for="librarySaveName" class="label">Save the current palette</label>
+        <div class="library__row">
+          <input type="text" id="librarySaveName" maxlength="60" autocomplete="off" />
+          <button type="submit" class="btn btn--primary btn--sm">Save</button>
+        </div>
+      </form>
+      <form id="libraryImportForm" class="library__form">
+        <label for="libraryImportText" class="label">Import</label>
+        <textarea id="libraryImportText" rows="3" spellcheck="false" placeholder="https://coolors.co/palette/264653-2a9d8f-e9c46a&#10;#264653, #2a9d8f, rgb(233 196 106), --brand: oklch(0.7 0.12 60)"></textarea>
+        <div class="library__row">
+          <span class="hint">Hex codes, CSS colors or a Coolors link. Pasting several colors into the hex field at the top also works.</span>
+          <button type="submit" class="btn btn--outline btn--sm">Import</button>
+        </div>
+        <p id="libraryImportStatus" class="library__status" role="status"></p>
+      </form>
+      <div class="library__saved">
+        <span class="label">Saved in this browser</span>
+        <p id="libraryEmpty" class="hint">Nothing saved yet.</p>
+        <ul id="libraryList" class="library__list"></ul>
+      </div>
+    </dialog>
+
+    <script defer src="index.js?v=5"></script>
   </body>
 </html>
