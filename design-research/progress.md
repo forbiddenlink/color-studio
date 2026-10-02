@@ -12,7 +12,7 @@ Screenshots use the production bundle, not the dev server (the dev server watche
 - [x] Phase 4: Foundation + homepage
 - [x] Phase 5: Roll out to every template
 - [x] Phase 6: Verify
-- [→] Phase 7: Report
+- [x] Phase 7: Report (`report.md`). Stopped here; not merged.
 
 ## Template tracker
 
