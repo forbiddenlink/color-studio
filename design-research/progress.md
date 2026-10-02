@@ -11,8 +11,8 @@ Screenshots use the production bundle, not the dev server (the dev server watche
 - [x] Phase 3: Decide (`plan.md`, `needs-approval.md`)
 - [x] Phase 4: Foundation + homepage
 - [x] Phase 5: Roll out to every template
-- [→] Phase 6: Verify
-- [ ] Phase 7: Report
+- [x] Phase 6: Verify
+- [→] Phase 7: Report
 
 ## Template tracker
 
@@ -60,3 +60,19 @@ Journey checks (Playwright, production bundle): hex error announce, history reco
 | Craft (mobile, a11y, perf) | 2 | 4 | Mobile overflow 710px -> 390px (gradient code nowrap); export dialog was pinned top-left (reset removed dialog auto margin); export tabs scroll instead of wrapping on phones |
 
 Lighthouse not run yet (Phase 6).
+
+## Phase 6 verification
+
+- `pnpm test`: 71/71 pass. `pnpm biome:check`: 0 errors, 0 warnings (1 info: biome schema version). `pnpm build`: compiles (3 pre-existing webpack size warnings). No TypeScript in this repo, so no typecheck step.
+- Lighthouse 12 (JSON in `lighthouse/`), production bundle served gzip-compressed (`npx serve dist`), vs the live site:
+
+| | Perf | A11y | Best pr. | SEO | LCP | CLS | TBT |
+|---|---|---|---|---|---|---|---|
+| Live, mobile | 83 | 84 | 100 | 100 | 3.7 s | 0 | 0 ms |
+| New, mobile | 97 | 100 | 100 | 100 | 2.1 s | 0.003 | 60 ms |
+| Live, desktop | 99 | 89 | 100 | 100 | 0.7 s | 0.042 | 0 ms |
+| New, desktop | 100 | 100 | 100 | 100 | 0.5 s | 0.003 | 0 ms |
+
+  Regressions found and fixed on the way: CLS 0.28 (empty palette section on phones, now reserves height), TBT 430 ms (WebGL shader compiled at startup, now compiled when its section nears the viewport; script now `defer`), 4 low-contrast labels (opacity on band/scale metadata), scale buttons whose aria-label hid their visible text.
+  Mobile runs vary 89-97 across 3 runs.
+- Journeys clicked in the browser: generate (Space, 6 schemes), lock a band then Shuffle, lock base, apply hex (valid/invalid), recent colors, adjust sliders, contrast suggest defaults, vision simulation, image upload -> use as palette, export sheet (8 formats, hex/oklch, copy, download), PNG + SVG downloads, share link restores palette + locks, undo/redo across palette changes, theme toggle, keyboard (skip link first, `E` opens export, Esc closes, focus moves into dialog). 0 page errors.

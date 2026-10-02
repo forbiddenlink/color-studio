@@ -2084,6 +2084,9 @@ function captureUndoState() {
     saturation: parseInt(saturationSlider.value, 10),
     hue: parseInt(hueSlider.value, 10),
     isDarken: toggleBtn.classList.contains('toggled'),
+    // The palette is part of the work, so Undo after Shuffle brings it back too
+    palette: getPaletteHexes(),
+    locks: paletteLocks.slice(),
   }
   return state
 }
@@ -2129,7 +2132,12 @@ function restoreUndoState(state) {
     darkenText.classList.add('unselected')
   }
 
+  lightenText.setAttribute('aria-pressed', String(!state.isDarken))
+  darkenText.setAttribute('aria-pressed', String(state.isDarken))
+
   updateOutputColor()
+  if (state.palette?.length) displayColorScheme(state.palette, state.locks)
+  else markBaseBand()
   isUndoRedoAction = false
   updateUndoRedoButtons()
 }
@@ -2571,12 +2579,17 @@ function _getCompoundColors(hsl) {
 let paletteLocks = []
 
 // Text color for a band: same hue as the swatch, pushed to the far lightness end
+// Picks whichever tinted ink (dark or light) gives the higher WCAG ratio, so small
+// labels on mid-tone bands still clear 4.5:1
 function getBandInkColor(hex) {
   const o = hexToOklch(hex)
   const h = o.h || 0
-  return o.l > 0.62
-    ? oklchToHex(0.24, Math.min(o.c * 0.7, 0.08), h)
-    : oklchToHex(0.97, Math.min(o.c * 0.25, 0.03), h)
+  const dark = oklchToHex(0.2, Math.min(o.c * 0.6, 0.06), h)
+  const light = oklchToHex(0.98, Math.min(o.c * 0.2, 0.02), h)
+  const bg = hexToRGB(hex)
+  return calculateContrastRatio(hexToRGB(dark), bg) >= calculateContrastRatio(hexToRGB(light), bg)
+    ? dark
+    : light
 }
 
 const ICON_COPY =
@@ -2918,14 +2931,17 @@ function renderScaleInto(listEl, scale, label) {
       btn.className = 'scale__step'
       btn.style.backgroundColor = hex
       btn.style.color = onWhite > onBlack ? '#ffffff' : '#111111'
-      btn.setAttribute('aria-label', `${label} ${step}, ${hex}. Copy`)
+      // Visible text stays inside the accessible name (WCAG 2.5.3)
+      const verb = document.createElement('span')
+      verb.className = 'sr-only'
+      verb.textContent = `Copy ${label.toLowerCase()} `
       const num = document.createElement('span')
       num.className = 'scale__num'
       num.textContent = step
       const meta = document.createElement('span')
       meta.className = 'scale__ratio'
       meta.textContent = `${hex}\n${onWhite.toFixed(1)} / ${onBlack.toFixed(1)}`
-      btn.append(num, meta)
+      btn.append(verb, num, meta)
       btn.addEventListener('click', () => {
         copyToClipboard(hex, 'Copied', null)
         showToast(`Copied ${label.toLowerCase()}-${step} ${hex}`)
@@ -2983,6 +2999,7 @@ for (const btn of [
     if (!build) return
     displayColorScheme(build())
     setActiveScheme(btn)
+    pushUndoState()
   })
 }
 
@@ -3658,8 +3675,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize gradient generator
   initGradientGenerator()
 
-  // Initialize palette-driven shader background
-  initShaderBackground()
+  // Initialize palette-driven shader background only when its section nears the
+  // viewport: compiling WebGL programs at startup blocked the main thread on phones
+  const shaderSection = document.getElementById('shaderSection')
+  if (shaderSection && 'IntersectionObserver' in window) {
+    const lazy = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          lazy.disconnect()
+          initShaderBackground()
+        }
+      },
+      { rootMargin: '400px 0px' }
+    )
+    lazy.observe(shaderSection)
+  } else {
+    initShaderBackground()
+  }
 })
 
 // ==========================================
@@ -4496,6 +4528,7 @@ function displayExtractedColors(colors) {
     useBtn.onclick = () => {
       displayColorScheme(colors)
       setActiveScheme(null)
+      pushUndoState()
       showToast('Image colors are now the palette')
       document.querySelector('.stage')?.scrollIntoView({ behavior: 'smooth' })
     }
