@@ -1,101 +1,91 @@
 # Color Studio
 
-A modern color manipulation tool for designers and developers. Create, modify, and export colors in real-time.
+Build a color palette, check it for contrast and color vision, and export it as code for
+CSS, Tailwind, shadcn/ui and more. Runs entirely in the browser.
 
-**[Live Demo →](https://color-studio-mu.vercel.app)**
+**[Open Color Studio](https://color-studio-mu.vercel.app)**
 
 ## Features
 
-- **Color Input** — HEX input with validation, native color picker, 8 quick presets
-- **Color Manipulation** — Brightness, saturation, and hue controls with real-time preview
-- **Color Schemes** — Complementary, analogous, triadic, and random palette generation
-- **Keyboard Shortcuts** — Space=random palette, L=lock/unlock, C=copy color
-- **Image Extraction** — Drag-drop images to extract dominant colors (median-cut algorithm)
-- **UI Preview** — See colors applied to card and nav components in real-time
-- **Colorblind Simulation** — Protanopia, deuteranopia, tritanopia visualization
-- **URL Sharing** — Share palettes via URL state persistence
-- **Export** — CSS, SCSS, JSON, Tailwind config, or shareable link
-- **1500+ Color Names** — Semantic names using Name That Color algorithm
-- **History** — Automatic color history with localStorage persistence
-- **Accessibility** — WCAG AA/AAA badges, dark mode, reduced motion support
+- **Palette stage**: six harmony schemes (complementary, analogous, triadic, split,
+  square, compound) plus Shuffle. Each color shows its name, hex and OKLCH value.
+- **Locks**: lock any palette color to keep it through Shuffle, or lock the base color.
+- **Adjust**: brightness, saturation and hue, with the original and modified color side by side.
+- **Scales**: an 11-step 50-950 ramp of the base color and a matching neutral, with contrast
+  ratios against white and black. Click a step to copy it.
+- **Contrast checker**: WCAG 2 AA and AAA results, and a button that suggests a passing text color.
+- **Color vision simulation**: protanopia, deuteranopia and tritanopia, applied to the palette, the adjust swatches and the previews.
+- **In use**: the palette on a dashboard card, a hero, a mobile screen and a small UI kit, with
+  contrast, harmony and WCAG scores.
+- **Gradients**: linear, radial and conic CSS from the palette, plus an animated shader preview.
+- **From an image**: drop a photo to extract its dominant colors and use them as the palette.
+  The image never leaves your browser.
+- **Export**: CSS, SCSS, JSON, Tailwind v4, Tailwind v3, shadcn/ui, DaisyUI and Bootstrap, in hex
+  or OKLCH. Copy the code or download the file. Also PNG and SVG swatches.
+- **Share**: the URL holds the base color, adjustments, full palette and locks.
+- **Undo and redo**, recent colors, light and dark themes, and reduced-motion support.
+
+### Keyboard shortcuts
+
+| Key | Action |
+|---|---|
+| Space | Shuffle the palette |
+| L | Lock or unlock the base color |
+| C | Copy the modified color |
+| E | Open Export |
+| Ctrl Z / Ctrl Shift Z | Undo / redo |
 
 ## Getting started
 
-### Prerequisites
-
-- Node.js 18+
-- pnpm
-
-### Installation
+Prerequisites: Node.js 18+ and pnpm.
 
 ```bash
 git clone https://github.com/forbiddenlink/color-studio.git
 cd color-studio
 pnpm install
+pnpm start   # http://localhost:3000
 ```
 
-### Development
+### Scripts
 
 ```bash
-pnpm start
-```
-
-Open `http://localhost:3000` in your browser.
-
-### Production build
-
-```bash
-pnpm build
-```
-
-Output is generated in the `dist/` directory.
-
-### Other scripts
-
-```bash
-pnpm watch       # webpack in watch mode
-pnpm test        # vitest run
+pnpm build        # production bundle in dist/
+pnpm watch        # webpack in watch mode
+pnpm test         # vitest
 pnpm test:watch
-pnpm check       # biome check + test + build
+pnpm check        # biome check + test + build
 pnpm biome:check / pnpm biome:fix / pnpm biome:format
 pnpm audit / pnpm security   # pnpm audit --audit-level high
 ```
 
+`pnpm build` alone does not copy the static files (favicon, manifest, service worker). The
+Vercel build command in `vercel.json` does that.
+
 ### Env vars (optional)
 
-`NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` in `.env.local` enable PostHog
-analytics. See `CLAUDE.md` for how these get wired through webpack.
+`NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` in `.env.local` turn on PostHog
+analytics. Without them, PostHog never starts. See `CLAUDE.md` for how they are wired through
+webpack.
 
-## Usage
+## Design
 
-1. **Input a color** — Enter a HEX code, use the color picker, or click a preset
-2. **Adjust** — Use sliders to modify brightness, saturation, and hue
-3. **Generate schemes** — Click Complementary, Analogous, or Triadic
-4. **Export** — Copy in your preferred format (CSS/SCSS/JSON)
+The interface follows a "specimen book" direction: near-neutral paper and ink chrome so the
+palette you build is the only color on the page.
 
-## Technical Details
+| Aspect | Choice |
+|---|---|
+| Framework | Vanilla HTML, CSS and JavaScript (ES6+) |
+| Build | Webpack 5 + Babel |
+| Color math | [culori](https://culorijs.org), OKLCH throughout |
+| Tokens | CSS custom properties in `index.css`, light and dark |
+| Type | Instrument Serif (names, headings), Geist (interface), Geist Mono (values) |
+| Offline | Service worker caches the app shell |
 
-| Aspect | Implementation |
-|--------|---------------|
-| Framework | Vanilla HTML/CSS/JS (ES6+) |
-| Build Tool | Webpack 5 |
-| Styling | CSS with custom properties (Tokens) |
-| Typography | Inter & JetBrains Mono (Google Fonts) |
-| State | localStorage for history |
+Design research, references and before/after screenshots are in `design-research/`.
 
-### Design System
+## Browser support
 
-The UI is built on a premium, dark-mode design system tailored for professional creators:
-
-- **Theme** — Cinematic dark mode (`#101014` base) with high-signal Indigo accents
-- **Layout** — Responsive 100vw/100vh app shell (Sidebar, Main Canvas, Tools Panel)
-- **Typography** — Inter for fluid UI copy, JetBrains Mono for technical hex/rgb outputs
-- **Surfaces** — Elevated tool panels with inset shadows and edge-to-edge fluid color bleeds
-- **Spacing** — Dense 4pt rhythm system for a compact, utility-first feel
-
-## Browser Support
-
-Chrome, Firefox, Safari, Edge (latest versions)
+Latest Chrome, Edge, Firefox and Safari.
 
 ## License
 
