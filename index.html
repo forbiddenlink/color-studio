@@ -44,7 +44,9 @@
     />
 
     <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#4a90e2" />
+    <meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -60,14 +62,21 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
 
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css"
-    />
-    <link rel="stylesheet" href="index.css" />
+    <!-- Theme: apply the saved choice before first paint to avoid a flash -->
+    <script>
+      try {
+        const saved = localStorage.getItem('cs-theme')
+        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved
+      } catch {}
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="index.css" />
 
     <script type="application/ld+json">
     {
@@ -85,346 +94,262 @@
   </head>
   <body>
     <a href="#main-content" class="skip-link">Skip to content</a>
-    <div class="app-layout">
-      <!-- Sidebar: Navigation & History -->
-      <aside class="sidebar" aria-label="Sidebar Navigation">
-        <div class="brand-header">
-          <h1 class="title">Color Studio</h1>
-        </div>
 
-        <div class="color-presets p-lg border-b">
-          <h3>Quick Colors</h3>
-          <div class="preset-grid">
-            <button type="button"
-              class="preset-color"
-              style="background-color: #ff0000"
-              data-color="#ff0000"
-              title="Red"
-              aria-label="Select red color"
-            ></button>
-            <button type="button"
-              class="preset-color"
-              style="background-color: #00ff00"
-              data-color="#00ff00"
-              title="Green"
-              aria-label="Select green color"
-            ></button>
-            <button type="button"
-              class="preset-color"
-              style="background-color: #0000ff"
-              data-color="#0000ff"
-              title="Blue"
-              aria-label="Select blue color"
-            ></button>
-            <button type="button"
-              class="preset-color"
-              style="background-color: #ffff00"
-              data-color="#ffff00"
-              title="Yellow"
-              aria-label="Select yellow color"
-            ></button>
-            <button type="button"
-              class="preset-color"
-              style="background-color: #ff00ff"
-              data-color="#ff00ff"
-              title="Magenta"
-              aria-label="Select magenta color"
-            ></button>
-            <button type="button"
-              class="preset-color"
-              style="background-color: #00ffff"
-              data-color="#00ffff"
-              title="Cyan"
-              aria-label="Select cyan color"
-            ></button>
-            <button type="button"
-              class="preset-color"
-              style="background-color: #ffffff"
-              data-color="#ffffff"
-              title="White"
-              aria-label="Select white color"
-            ></button>
-            <button type="button"
-              class="preset-color"
-              style="background-color: #000000"
-              data-color="#000000"
-              title="Black"
-              aria-label="Select black color"
-            ></button>
+    <!-- ============ Header: wordmark, color input, primary actions ============ -->
+    <header class="masthead">
+      <div class="masthead__inner">
+        <a class="wordmark" href="/" aria-label="Color Studio home">
+          <span class="wordmark__chip" aria-hidden="true"></span>
+          Color <em>Studio</em>
+        </a>
+
+        <fieldset class="color-input" aria-label="Base color">
+          <label class="color-input__chip" for="colorPicker">
+            <span class="sr-only">Pick a base color</span>
+            <input type="color" id="colorPicker" value="#c6d5ac" />
+          </label>
+          <label for="hexInput" class="sr-only">Hex color value</label>
+          <input
+            type="text"
+            name="hex"
+            id="hexInput"
+            class="color-input__hex"
+            placeholder="#000000"
+            value="#c6d5ac"
+            spellcheck="false"
+            autocomplete="off"
+            aria-describedby="hexError"
+          />
+          <button type="button" id="applyButton" class="btn btn--quiet btn--sm">Apply</button>
+          <p id="hexError" class="color-input__error" role="alert" hidden></p>
+        </fieldset>
+
+        <div class="masthead__actions">
+          <button type="button" id="undoBtn" class="icon-btn" disabled aria-label="Undo" title="Undo (Ctrl+Z)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6a4 4 0 0 1 0 8H7"/><path d="M6 10L3 7l3-3"/></svg>
+          </button>
+          <button type="button" id="redoBtn" class="icon-btn" disabled aria-label="Redo" title="Redo (Ctrl+Shift+Z)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 7H7a4 4 0 0 0 0 8h2"/><path d="M10 10l3-3-3-3"/></svg>
+          </button>
+          <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch to dark theme" title="Toggle theme">
+            <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1"/></svg>
+            <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a5.5 5.5 0 1 0 7 7z"/></svg>
+          </button>
+          <button type="button" id="openExport" class="btn btn--primary" aria-haspopup="dialog">
+            Export
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <!-- ============ Stage: the palette is the hero ============ -->
+      <section class="stage" aria-labelledby="stageTitle">
+        <div class="stage__bar">
+          <h1 id="stageTitle" class="stage__title">
+            Build a palette, <em>ship it as code.</em>
+          </h1>
+          <div class="stage__controls">
+            <fieldset class="tabs scheme-tabs" aria-label="Color harmony">
+              <button type="button" id="complementaryBtn" class="tab" data-scheme="complementary">Complementary</button>
+              <button type="button" id="analogousBtn" class="tab" data-scheme="analogous">Analogous</button>
+              <button type="button" id="triadicBtn" class="tab" data-scheme="triadic">Triadic</button>
+              <button type="button" id="splitComplementaryBtn" class="tab" data-scheme="split">Split</button>
+              <button type="button" id="squareBtn" class="tab" data-scheme="square">Square</button>
+              <button type="button" id="compoundBtn" class="tab" data-scheme="compound">Compound</button>
+            </fieldset>
+            <button type="button" id="randomPaletteBtn" class="btn btn--outline">
+              Shuffle <kbd>Space</kbd>
+            </button>
           </div>
         </div>
 
-        <div class="color-history p-lg">
-          <div class="section-header">
-            <h3>Recent Colors</h3>
-            <button type="button" id="clearHistory" class="button">Clear</button>
-          </div>
-          <div id="colorHistory" class="history-container">
-            <p id="historyEmpty" class="history-empty">No colors saved yet.</p>
-          </div>
-        </div>
-      </aside>
+        <section id="schemeColors" class="bands" aria-label="Current palette"></section>
 
-      <!-- Main Canvas: Central focus area -->
-      <main class="main-canvas" id="main-content">
-        <!-- Top Toolbar: Input and Export -->
-        <div class="top-bar p-lg border-b flex-col gap-md">
-          <div class="input-group flex-row">
-            <div class="input-with-label">
-              <label for="colorPicker" class="sr-only">Pick a color</label>
-              <input type="color" id="colorPicker" value="#c6d5ac" />
-              <label for="hexInput" class="sr-only">Hex color value</label>
-              <input
-                type="text"
-                name="hex"
-                id="hexInput"
-                placeholder="#000000"
-                value="#c6d5ac"
-              />
-              <span class="format-label">HEX</span>
+        <div class="stage__foot">
+          <div class="presets">
+            <span class="label">Start from</span>
+            <div class="preset-grid">
+              <button type="button" class="preset-color" style="background-color: #e4572e" data-color="#e4572e" title="Vermilion #e4572e" aria-label="Start from vermilion"></button>
+              <button type="button" class="preset-color" style="background-color: #f2a541" data-color="#f2a541" title="Saffron #f2a541" aria-label="Start from saffron"></button>
+              <button type="button" class="preset-color" style="background-color: #c6d5ac" data-color="#c6d5ac" title="Sage #c6d5ac" aria-label="Start from sage"></button>
+              <button type="button" class="preset-color" style="background-color: #2a9d8f" data-color="#2a9d8f" title="Teal #2a9d8f" aria-label="Start from teal"></button>
+              <button type="button" class="preset-color" style="background-color: #3a5a9b" data-color="#3a5a9b" title="Cobalt #3a5a9b" aria-label="Start from cobalt"></button>
+              <button type="button" class="preset-color" style="background-color: #7b4b94" data-color="#7b4b94" title="Plum #7b4b94" aria-label="Start from plum"></button>
+              <button type="button" class="preset-color" style="background-color: #e8e1d5" data-color="#e8e1d5" title="Bone #e8e1d5" aria-label="Start from bone"></button>
+              <button type="button" class="preset-color" style="background-color: #22201c" data-color="#22201c" title="Ink #22201c" aria-label="Start from ink"></button>
             </div>
-            <button type="button" id="applyButton" class="button button--success">
-              Apply
-            </button>
-            <button type="button" id="copyButton" class="button button--primary">Copy</button>
-            <button type="button" id="undoBtn" class="button undo-redo-btn" disabled title="Undo (Ctrl+Z)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Undo"><path d="M3 7h6a4 4 0 0 1 0 8H7"/><path d="M6 10L3 7l3-3"/></svg>
-            </button>
-            <button type="button" id="redoBtn" class="button undo-redo-btn" disabled title="Redo (Ctrl+Shift+Z)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Redo"><path d="M13 7H7a4 4 0 0 0 0 8h2"/><path d="M10 10l3-3-3-3"/></svg>
-            </button>
           </div>
-
-          <div class="export-buttons">
-            <button type="button" id="exportCss" class="button button--primary">CSS</button>
-            <button type="button" id="exportScss" class="button button--primary">SCSS</button>
-            <button type="button" id="exportJson" class="button button--primary">JSON</button>
-            <button type="button" id="exportTailwind" class="button button--primary">
-              Tailwind
-            </button>
-            <button type="button" id="exportShadcn" class="button button--primary">
-              shadcn/ui
-            </button>
-            <button type="button" id="copyLink" class="button button--success">Link</button>
-            <button type="button" id="exportImage" class="button button--success">Image</button>
-          </div>
+          <p class="stage__hint">
+            Click a name to make it the base. <kbd>L</kbd> locks the base color.
+            <span id="lockIndicator" class="lock-indicator">Base unlocked</span>
+          </p>
         </div>
+      </section>
 
-        <div class="canvas-content p-lg flex-col gap-md">
-          <!-- Central Color Display -->
+      <!-- ============ 01 Adjust ============ -->
+      <section class="chapter" id="adjust" aria-labelledby="adjustTitle">
+        <header class="chapter__head">
+          <span class="chapter__num">01</span>
+          <h2 id="adjustTitle" class="chapter__title">Adjust</h2>
+          <p class="chapter__lede">Shift lightness, chroma and hue in OKLCH, so steps look even to the eye.</p>
+        </header>
+
+        <div class="chapter__body">
           <div class="color-display">
-            <div class="color-box">
-              <div class="color-info">
-                <h3>Original</h3>
-                <span id="colorName" class="color-name"></span>
+            <figure class="specimen">
+              <div id="inputColor" class="specimen__swatch box"></div>
+              <figcaption class="specimen__meta">
+                <span class="label">Original</span>
+                <span id="colorName" class="specimen__name"></span>
+                <dl class="values">
+                  <div><dt>HEX</dt><dd id="inputColorHex"></dd></div>
+                  <div><dt>RGB</dt><dd id="inputColorRgb"></dd></div>
+                  <div><dt>HSL</dt><dd id="inputColorHsl"></dd></div>
+                  <div><dt>OKLCH</dt><dd id="inputColorOklch"></dd></div>
+                </dl>
+              </figcaption>
+            </figure>
+            <figure class="specimen">
+              <div id="alteredColor" class="specimen__swatch box"></div>
+              <figcaption class="specimen__meta">
+                <span class="label">Modified</span>
+                <span id="modifiedColorName" class="specimen__name"></span>
+                <dl class="values">
+                  <div><dt>HEX</dt><dd id="alteredColorHex"></dd></div>
+                  <div><dt>RGB</dt><dd id="alteredColorRgb"></dd></div>
+                  <div><dt>HSL</dt><dd id="alteredColorHsl"></dd></div>
+                  <div><dt>OKLCH</dt><dd id="alteredColorOklch"></dd></div>
+                </dl>
+                <p class="specimen__contrast"><span id="alteredColorText" class="contrast-ratio"></span></p>
+                <button type="button" id="copyButton" class="btn btn--outline btn--sm">Copy modified</button>
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="controls">
+            <div class="control">
+              <div class="control__head">
+                <label for="slider" id="sliderText" class="control__label">Brightness: 0%</label>
+                <fieldset id="toggleBtn" class="segmented" aria-label="Brightness direction">
+                  <button type="button" id="lightenText" class="segmented__opt" aria-pressed="true">Lighten</button>
+                  <button type="button" id="darkenText" class="segmented__opt unselected" aria-pressed="false">Darken</button>
+                </fieldset>
               </div>
-              <div id="inputColor" class="box"></div>
-              <div class="color-values">
-                <span id="inputColorHex"></span>
-                <span id="inputColorRgb"></span>
-                <span id="inputColorHsl"></span>
-                <span id="inputColorOklch" class="oklch-value"></span>
-              </div>
+              <input type="range" min="0" max="100" value="0" class="slider slider--light" id="slider" name="slider" />
             </div>
-            <div class="color-box">
-              <div class="color-info">
-                <h3>Modified</h3>
-                <span id="modifiedColorName" class="color-name"></span>
+            <div class="control">
+              <div class="control__head">
+                <label for="saturationSlider" id="saturationText" class="control__label">Saturation: 0%</label>
               </div>
-              <div id="alteredColor" class="box"></div>
-              <div class="color-values">
-                <span id="alteredColorHex"></span>
-                <span id="alteredColorRgb"></span>
-                <span id="alteredColorHsl"></span>
-                <span id="alteredColorOklch" class="oklch-value"></span>
-                <span id="alteredColorText" class="contrast-ratio"></span>
+              <input type="range" min="-100" max="100" value="0" class="slider slider--chroma" id="saturationSlider" name="saturationSlider" />
+            </div>
+            <div class="control">
+              <div class="control__head">
+                <label for="hueSlider" id="hueText" class="control__label">Hue: 0&deg;</label>
               </div>
+              <input type="range" min="0" max="360" value="0" class="slider slider--hue" id="hueSlider" name="hueSlider" />
             </div>
           </div>
 
-          <!-- Schemes -->
-          <div class="tool-section">
-            <h3>Color Schemes</h3>
-            <div class="scheme-buttons">
-              <button type="button" id="complementaryBtn" class="button button--primary">
-                Comp
-              </button>
-              <button type="button" id="analogousBtn" class="button button--primary">
-                Analog
-              </button>
-              <button type="button" id="triadicBtn" class="button button--primary">
-                Triadic
-              </button>
-              <button type="button" id="splitComplementaryBtn" class="button button--primary">
-                Split-C
-              </button>
-              <button type="button" id="compoundBtn" class="button button--primary">
-                Compound
-              </button>
-              <button type="button" id="randomPaletteBtn" class="button button--success">
-                Random
-              </button>
+          <div class="history">
+            <div class="history__head">
+              <span class="label">Recent colors</span>
+              <button type="button" id="clearHistory" class="link-btn">Clear</button>
             </div>
-            <div id="schemeColors" class="scheme-colors"></div>
+            <div id="colorHistory" class="history-container">
+              <p id="historyEmpty" class="history-empty">No colors saved yet. Pick a color to get started.</p>
+            </div>
           </div>
+        </div>
+      </section>
 
-          <!-- Contrast Checker -->
-          <div class="contrast-checker-section tool-section">
-            <h3>Contrast Checker</h3>
-            <div class="contrast-inputs">
-              <div class="contrast-input-group">
-                <label for="contrastFg">Foreground</label>
-                <div class="contrast-color-input">
-                  <input type="color" id="contrastFgPicker" value="#000000" />
-                  <input type="text" id="contrastFg" placeholder="#000000" value="#000000" />
-                </div>
-              </div>
-              <button type="button" id="contrastSwapBtn" class="button" title="Swap colors">&#8645;</button>
-              <div class="contrast-input-group">
-                <label for="contrastBg">Background</label>
-                <div class="contrast-color-input">
-                  <input type="color" id="contrastBgPicker" value="#ffffff" />
-                  <input type="text" id="contrastBg" placeholder="#ffffff" value="#ffffff" />
-                </div>
-              </div>
-            </div>
-            <div class="contrast-ratio-display">
+      <!-- ============ 02 Scale ============ -->
+      <section class="chapter" id="scale" aria-labelledby="scaleTitle">
+        <header class="chapter__head">
+          <span class="chapter__num">02</span>
+          <h2 id="scaleTitle" class="chapter__title">Scale</h2>
+          <p class="chapter__lede">An 11-step 50&ndash;950 ramp of the base color and a matching neutral. Ratios are against white / black. Click a step to copy it.</p>
+        </header>
+        <div class="chapter__body">
+          <div class="scale-row">
+            <span class="label" id="scaleBaseLabel">Base</span>
+            <ol id="scaleBase" class="scale" aria-labelledby="scaleBaseLabel"></ol>
+          </div>
+          <div class="scale-row">
+            <span class="label" id="scaleNeutralLabel">Neutral</span>
+            <ol id="scaleNeutral" class="scale" aria-labelledby="scaleNeutralLabel"></ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 03 Contrast ============ -->
+      <section class="chapter" id="contrast" aria-labelledby="contrastTitle">
+        <header class="chapter__head">
+          <span class="chapter__num">03</span>
+          <h2 id="contrastTitle" class="chapter__title">Contrast</h2>
+          <p class="chapter__lede">Check text against a background with WCAG 2 ratios, then see the palette through different color vision.</p>
+        </header>
+        <div class="chapter__body">
+          <div class="contrast-checker-section">
+            <div class="contrast-preview" id="contrastPreview">
+              <p class="contrast-preview-large">Large text, 24px</p>
+              <p class="contrast-preview-normal">Body text at 16px reads like this sentence.</p>
               <span class="contrast-ratio-value" id="contrastRatioValue">21.00:1</span>
             </div>
-            <div class="contrast-badges" id="contrastBadges">
-              <div class="contrast-badge-row">
-                <span class="contrast-badge-label">AA Normal</span>
-                <span class="contrast-badge pass" id="badgeAaNormal">Pass</span>
-              </div>
-              <div class="contrast-badge-row">
-                <span class="contrast-badge-label">AA Large</span>
-                <span class="contrast-badge pass" id="badgeAaLarge">Pass</span>
-              </div>
-              <div class="contrast-badge-row">
-                <span class="contrast-badge-label">AAA Normal</span>
-                <span class="contrast-badge pass" id="badgeAaaNormal">Pass</span>
-              </div>
-              <div class="contrast-badge-row">
-                <span class="contrast-badge-label">AAA Large</span>
-                <span class="contrast-badge pass" id="badgeAaaLarge">Pass</span>
-              </div>
-            </div>
-            <div class="contrast-preview" id="contrastPreview">
-              <p class="contrast-preview-normal">Normal text sample (16px)</p>
-              <p class="contrast-preview-large">Large text (24px)</p>
-            </div>
-            <button type="button" id="contrastSuggestBtn" class="button button--success">
-              Suggest AA-passing foreground
-            </button>
-          </div>
-
-          <!-- Gradients -->
-          <div class="gradient-section tool-section">
-            <h3>Gradient Generator</h3>
-            <div class="gradient-controls">
-              <div class="gradient-type-toggle">
-                <button type="button"
-                  id="linearGradientBtn"
-                  class="button gradient-type-btn active"
-                >
-                  Linear
+            <div class="contrast-side">
+              <div class="contrast-inputs">
+                <div class="contrast-input-group">
+                  <label for="contrastFg" class="label">Text</label>
+                  <div class="contrast-color-input">
+                    <input type="color" id="contrastFgPicker" value="#000000" aria-label="Pick text color" />
+                    <input type="text" id="contrastFg" placeholder="#000000" value="#000000" spellcheck="false" />
+                  </div>
+                </div>
+                <button type="button" id="contrastSwapBtn" class="icon-btn" aria-label="Swap text and background" title="Swap">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 2v12M2 11l3 3 3-3M11 14V2M8 5l3-3 3 3"/></svg>
                 </button>
-                <button type="button" id="radialGradientBtn" class="button gradient-type-btn">
-                  Radial
-                </button>
-                <button type="button" id="conicGradientBtn" class="button gradient-type-btn">
-                  Conic
-                </button>
+                <div class="contrast-input-group">
+                  <label for="contrastBg" class="label">Background</label>
+                  <div class="contrast-color-input">
+                    <input type="color" id="contrastBgPicker" value="#ffffff" aria-label="Pick background color" />
+                    <input type="text" id="contrastBg" placeholder="#ffffff" value="#ffffff" spellcheck="false" />
+                  </div>
+                </div>
               </div>
-              <div class="gradient-angle-control" id="gradientAngleControl">
-                <label
-                  for="gradientAngle"
-                  id="gradientAngleText"
-                  class="slider-label"
-                  >Angle: 90&deg;</label
-                >
-                <input
-                  type="range"
-                  min="0"
-                  max="360"
-                  value="90"
-                  class="slider"
-                  id="gradientAngle"
-                  name="gradientAngle"
-                />
-              </div>
-            </div>
-            <div class="gradient-preview-container">
-              <div id="gradientPreview" class="gradient-preview"></div>
-            </div>
-            <div class="gradient-output">
-              <code id="gradientCode" class="gradient-code"
-                >linear-gradient(90deg, #c6d5ac, #a3b78a)</code
-              >
-              <button type="button" id="copyGradientBtn" class="button button--success">
-                Copy
-              </button>
+              <dl class="contrast-badges" id="contrastBadges">
+                <div class="contrast-badge-row"><dt class="contrast-badge-label">AA normal <small>4.5</small></dt><dd><span class="contrast-badge pass" id="badgeAaNormal">Pass</span></dd></div>
+                <div class="contrast-badge-row"><dt class="contrast-badge-label">AA large <small>3.0</small></dt><dd><span class="contrast-badge pass" id="badgeAaLarge">Pass</span></dd></div>
+                <div class="contrast-badge-row"><dt class="contrast-badge-label">AAA normal <small>7.0</small></dt><dd><span class="contrast-badge pass" id="badgeAaaNormal">Pass</span></dd></div>
+                <div class="contrast-badge-row"><dt class="contrast-badge-label">AAA large <small>4.5</small></dt><dd><span class="contrast-badge pass" id="badgeAaaLarge">Pass</span></dd></div>
+              </dl>
+              <button type="button" id="contrastSuggestBtn" class="btn btn--outline">Suggest a passing text color</button>
             </div>
           </div>
 
-          <!-- Shader Background (palette-driven WebGL) -->
-          <div class="shader-section tool-section" id="shaderSection">
-            <h3>Shader Background</h3>
-            <p class="shader-hint">Animated backgrounds generated live from your palette. Export a frame as PNG.</p>
-            <div class="shader-controls">
-              <div class="shader-preset-toggle">
-                <button type="button" class="button shader-preset-btn active" data-preset="0">
-                  Aurora
-                </button>
-                <button type="button" class="button shader-preset-btn" data-preset="1">
-                  Mesh
-                </button>
-                <button type="button" class="button shader-preset-btn" data-preset="2">
-                  Plasma
-                </button>
-                <button type="button" class="button shader-preset-btn" data-preset="3">
-                  Waves
-                </button>
-                <button type="button" class="button shader-preset-btn" data-preset="4">
-                  Nebula
-                </button>
-                <button type="button" class="button shader-preset-btn" data-preset="5">
-                  Rings
-                </button>
-                <button type="button" class="button shader-preset-btn" data-preset="6">
-                  Dither
-                </button>
-              </div>
-              <div class="shader-speed-control">
-                <label for="shaderSpeed" id="shaderSpeedText" class="slider-label"
-                  >Speed: 1.0x</label
-                >
-                <input
-                  type="range"
-                  min="0"
-                  max="300"
-                  value="100"
-                  class="slider"
-                  id="shaderSpeed"
-                  name="shaderSpeed"
-                />
-              </div>
-            </div>
-            <div class="shader-preview-container">
-              <canvas id="shaderCanvas" class="shader-canvas"></canvas>
-            </div>
-            <div class="shader-actions">
-              <button type="button" id="shaderDownloadBtn" class="button button--success">
-                Download PNG
-              </button>
-            </div>
+          <div class="colorblind-section">
+            <span class="label" id="visionLabel">Vision simulation</span>
+            <fieldset class="segmented segmented--wide colorblind-buttons" aria-labelledby="visionLabel">
+              <button type="button" class="segmented__opt colorblind-btn active" data-mode="normal" aria-pressed="true">Typical</button>
+              <button type="button" class="segmented__opt colorblind-btn" data-mode="protanopia" aria-pressed="false">Protanopia</button>
+              <button type="button" class="segmented__opt colorblind-btn" data-mode="deuteranopia" aria-pressed="false">Deuteranopia</button>
+              <button type="button" class="segmented__opt colorblind-btn" data-mode="tritanopia" aria-pressed="false">Tritanopia</button>
+            </fieldset>
+            <p class="hint">Applies to the palette, the adjust swatches and the previews.</p>
           </div>
+        </div>
+      </section>
 
-          <!-- Palette Mockup Previews -->
-          <div class="mockup-section tool-section">
-            <h3>Palette Preview</h3>
+      <!-- ============ 04 In use ============ -->
+      <section class="chapter" id="preview" aria-labelledby="previewTitle">
+        <header class="chapter__head">
+          <span class="chapter__num">04</span>
+          <h2 id="previewTitle" class="chapter__title">In use</h2>
+          <p class="chapter__lede">The palette applied to three common surfaces, with a score for contrast, harmony and accessibility.</p>
+        </header>
+        <div class="chapter__body">
+          <div class="mockup-section">
             <div class="mockup-row">
-              <!-- Dashboard Card -->
               <div class="mockup-frame" id="mockupDashboard">
                 <div class="mockup-dashboard">
                   <div class="mock-dash-header">
@@ -432,23 +357,22 @@
                     <span class="mock-dash-badge">+12%</span>
                   </div>
                   <div class="mock-dash-value">$24,563</div>
-                  <div class="mock-dash-chart">
-                    <div class="mock-bar" style="height:40%"></div>
-                    <div class="mock-bar" style="height:65%"></div>
-                    <div class="mock-bar" style="height:45%"></div>
-                    <div class="mock-bar" style="height:80%"></div>
-                    <div class="mock-bar" style="height:55%"></div>
-                    <div class="mock-bar" style="height:90%"></div>
-                    <div class="mock-bar" style="height:70%"></div>
+                  <div class="mock-dash-chart" aria-hidden="true">
+                    <div class="mock-bar" style="height: 40%"></div>
+                    <div class="mock-bar" style="height: 65%"></div>
+                    <div class="mock-bar" style="height: 45%"></div>
+                    <div class="mock-bar" style="height: 80%"></div>
+                    <div class="mock-bar" style="height: 55%"></div>
+                    <div class="mock-bar" style="height: 90%"></div>
+                    <div class="mock-bar" style="height: 70%"></div>
                   </div>
                   <div class="mock-dash-footer">
                     <span class="mock-dash-label">Last 7 days</span>
-                    <span class="mock-dash-icon">&#9679;</span>
+                    <span class="mock-dash-icon" aria-hidden="true">&#9679;</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Landing Hero -->
               <div class="mockup-frame" id="mockupHero">
                 <div class="mockup-hero">
                   <div class="mock-hero-bg"></div>
@@ -456,46 +380,35 @@
                     <div class="mock-hero-tagline">Build faster</div>
                     <div class="mock-hero-headline">Ship beautiful products</div>
                     <div class="mock-hero-sub">The modern toolkit for teams who care about design.</div>
-                    <button type="button" class="mock-hero-cta">Get Started</button>
+                    <span class="mock-hero-cta">Get started</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Mobile App Screen -->
               <div class="mockup-frame" id="mockupMobile">
                 <div class="mockup-mobile">
                   <div class="mock-phone-status">
                     <span>9:41</span>
-                    <span class="mock-phone-icons">&#9679; &#9679; &#9679;</span>
+                    <span class="mock-phone-icons" aria-hidden="true">&#9679; &#9679; &#9679;</span>
                   </div>
                   <div class="mock-phone-nav">
-                    <span class="mock-phone-back">&#8592;</span>
+                    <span class="mock-phone-back" aria-hidden="true">&#8592;</span>
                     <span class="mock-phone-title">Home</span>
-                    <span class="mock-phone-menu">&#8943;</span>
+                    <span class="mock-phone-menu" aria-hidden="true">&#8943;</span>
                   </div>
                   <div class="mock-phone-body">
                     <div class="mock-phone-card">
                       <div class="mock-phone-card-header">Today</div>
-                      <div class="mock-phone-card-row">
-                        <span class="mock-phone-dot"></span>
-                        <span>Design review</span>
-                      </div>
-                      <div class="mock-phone-card-row">
-                        <span class="mock-phone-dot"></span>
-                        <span>Team standup</span>
-                      </div>
+                      <div class="mock-phone-card-row"><span class="mock-phone-dot"></span><span>Design review</span></div>
+                      <div class="mock-phone-card-row"><span class="mock-phone-dot"></span><span>Team standup</span></div>
                     </div>
                     <div class="mock-phone-card">
                       <div class="mock-phone-card-header">Stats</div>
-                      <div class="mock-phone-progress">
-                        <div class="mock-phone-progress-fill"></div>
-                      </div>
-                      <div class="mock-phone-card-row">
-                        <span>72% complete</span>
-                      </div>
+                      <div class="mock-phone-progress"><div class="mock-phone-progress-fill"></div></div>
+                      <div class="mock-phone-card-row"><span>72% complete</span></div>
                     </div>
                   </div>
-                  <div class="mock-phone-tab-bar">
+                  <div class="mock-phone-tab-bar" aria-hidden="true">
                     <span class="mock-tab active">&#9679;</span>
                     <span class="mock-tab">&#9679;</span>
                     <span class="mock-tab">&#9679;</span>
@@ -503,194 +416,198 @@
                   </div>
                 </div>
               </div>
+
+              <div class="mockup-frame mockup-frame--ui">
+                <div class="ui-preview-section">
+                  <div class="preview-nav" id="previewNav">
+                    <span class="preview-nav-item active">Home</span>
+                    <span class="preview-nav-item">About</span>
+                    <span class="preview-nav-item">Docs</span>
+                  </div>
+                  <div class="preview-card" id="previewCard">
+                    <div class="preview-header">Base + modified</div>
+                    <p class="preview-text">The card uses the base color; the button uses the modified color.</p>
+                    <span class="preview-button" id="previewButton">Button</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Color Harmony Scoring -->
-          <div class="harmony-section tool-section">
-            <h3>Harmony Analysis</h3>
+          <div class="harmony-section">
             <div class="harmony-grid">
               <div class="harmony-card">
-                <div class="harmony-gauge">
-                  <svg viewBox="0 0 80 80" role="img" aria-label="Contrast score gauge">
-                    <circle class="gauge-bg" cx="40" cy="40" r="34" />
-                    <circle class="gauge-fill" cx="40" cy="40" r="34" id="contrastArc" />
-                    <text x="40" y="38" class="gauge-value" id="contrastValue">--</text>
-                    <text x="40" y="50" class="gauge-label-text">Contrast</text>
-                  </svg>
-                </div>
-                <div class="harmony-detail" id="contrastDetail">Avg contrast ratio</div>
+                <svg class="harmony-gauge" viewBox="0 0 80 80" role="img" aria-label="Contrast score">
+                  <circle class="gauge-bg" cx="40" cy="40" r="34" />
+                  <circle class="gauge-fill" cx="40" cy="40" r="34" id="contrastArc" />
+                  <text x="40" y="45" class="gauge-value" id="contrastValue">--</text>
+                </svg>
+                <div><span class="harmony-name">Contrast</span><span class="harmony-detail" id="contrastDetail">Avg contrast ratio</span></div>
               </div>
               <div class="harmony-card">
-                <div class="harmony-gauge">
-                  <svg viewBox="0 0 80 80" role="img" aria-label="Harmony score gauge">
-                    <circle class="gauge-bg" cx="40" cy="40" r="34" />
-                    <circle class="gauge-fill gauge-fill--harmony" cx="40" cy="40" r="34" id="harmonyArc" />
-                    <text x="40" y="38" class="gauge-value" id="harmonyValue">--</text>
-                    <text x="40" y="50" class="gauge-label-text">Harmony</text>
-                  </svg>
-                </div>
-                <div class="harmony-detail" id="harmonyDetail">Detecting...</div>
+                <svg class="harmony-gauge" viewBox="0 0 80 80" role="img" aria-label="Harmony score">
+                  <circle class="gauge-bg" cx="40" cy="40" r="34" />
+                  <circle class="gauge-fill gauge-fill--harmony" cx="40" cy="40" r="34" id="harmonyArc" />
+                  <text x="40" y="45" class="gauge-value" id="harmonyValue">--</text>
+                </svg>
+                <div><span class="harmony-name">Harmony</span><span class="harmony-detail" id="harmonyDetail">Detecting</span></div>
               </div>
               <div class="harmony-card">
-                <div class="harmony-gauge">
-                  <svg viewBox="0 0 80 80" role="img" aria-label="WCAG accessibility score gauge">
-                    <circle class="gauge-bg" cx="40" cy="40" r="34" />
-                    <circle class="gauge-fill gauge-fill--access" cx="40" cy="40" r="34" id="accessArc" />
-                    <text x="40" y="38" class="gauge-value" id="accessValue">--</text>
-                    <text x="40" y="50" class="gauge-label-text">WCAG</text>
-                  </svg>
-                </div>
-                <div class="harmony-detail" id="accessDetail">AA pass rate</div>
+                <svg class="harmony-gauge" viewBox="0 0 80 80" role="img" aria-label="WCAG score">
+                  <circle class="gauge-bg" cx="40" cy="40" r="34" />
+                  <circle class="gauge-fill gauge-fill--access" cx="40" cy="40" r="34" id="accessArc" />
+                  <text x="40" y="45" class="gauge-value" id="accessValue">--</text>
+                </svg>
+                <div><span class="harmony-name">WCAG</span><span class="harmony-detail" id="accessDetail">AA pass rate</span></div>
               </div>
               <div class="harmony-card harmony-card--overall">
-                <div class="harmony-gauge">
-                  <svg viewBox="0 0 80 80" role="img" aria-label="Overall score gauge">
-                    <circle class="gauge-bg" cx="40" cy="40" r="34" />
-                    <circle class="gauge-fill gauge-fill--overall" cx="40" cy="40" r="34" id="overallArc" />
-                    <text x="40" y="38" class="gauge-value gauge-value--lg" id="overallValue">--</text>
-                    <text x="40" y="50" class="gauge-label-text">Overall</text>
-                  </svg>
-                </div>
-                <div class="harmony-detail" id="overallDetail">Combined score</div>
+                <svg class="harmony-gauge" viewBox="0 0 80 80" role="img" aria-label="Overall score">
+                  <circle class="gauge-bg" cx="40" cy="40" r="34" />
+                  <circle class="gauge-fill gauge-fill--overall" cx="40" cy="40" r="34" id="overallArc" />
+                  <text x="40" y="45" class="gauge-value" id="overallValue">--</text>
+                </svg>
+                <div><span class="harmony-name">Overall</span><span class="harmony-detail" id="overallDetail">Combined score</span></div>
               </div>
             </div>
           </div>
         </div>
-      </main>
+      </section>
 
-      <!-- Tools Panel: Properties & Adjustments -->
-      <aside class="tools-panel flex-col gap-md" aria-label="Tools and Properties">
-        <div class="controls-section">
-          <!-- Brightness Control -->
-          <div class="control-group">
-            <div class="control-header">
-              <h3>Brightness</h3>
-              <div class="toggle">
-                <p id="lightenText" class="toggle-text">L</p>
-                <div id="toggleBtn" class="toggle-btn">
-                  <div class="inner-circle"></div>
-                </div>
-                <p id="darkenText" class="toggle-text unselected">D</p>
+      <!-- ============ 05 Gradient & shader ============ -->
+      <section class="chapter" id="gradient" aria-labelledby="gradientTitle">
+        <header class="chapter__head">
+          <span class="chapter__num">05</span>
+          <h2 id="gradientTitle" class="chapter__title">Gradient <em>&amp;</em> shader</h2>
+          <p class="chapter__lede">CSS gradients interpolated in OKLCH, and animated WebGL backgrounds driven by the palette.</p>
+        </header>
+        <div class="chapter__body">
+          <div class="gradient-section">
+            <div class="gradient-preview-container">
+              <div id="gradientPreview" class="gradient-preview"></div>
+            </div>
+            <div class="gradient-controls">
+              <fieldset class="segmented gradient-type-toggle" aria-label="Gradient type">
+                <button type="button" id="linearGradientBtn" class="segmented__opt gradient-type-btn active">Linear</button>
+                <button type="button" id="radialGradientBtn" class="segmented__opt gradient-type-btn">Radial</button>
+                <button type="button" id="conicGradientBtn" class="segmented__opt gradient-type-btn">Conic</button>
+              </fieldset>
+              <div class="gradient-angle-control" id="gradientAngleControl">
+                <label for="gradientAngle" id="gradientAngleText" class="control__label">Angle: 90&deg;</label>
+                <input type="range" min="0" max="360" value="90" class="slider" id="gradientAngle" name="gradientAngle" />
               </div>
             </div>
-            <label for="slider" id="sliderText" class="slider-label"
-              >Brightness: 0%</label
-            >
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value="0"
-              class="slider"
-              id="slider"
-              name="slider"
-              aria-label="Brightness adjustment"
-            />
-          </div>
-
-          <!-- Saturation Control -->
-          <div class="control-group">
-            <div class="control-header">
-              <h3>Saturation</h3>
+            <div class="code-line">
+              <code id="gradientCode" class="gradient-code">linear-gradient(90deg, #c6d5ac, #a3b78a)</code>
+              <button type="button" id="copyGradientBtn" class="btn btn--outline btn--sm">Copy</button>
             </div>
-            <label
-              for="saturationSlider"
-              id="saturationText"
-              class="slider-label"
-              >Saturation: 0%</label
-            >
-            <input
-              type="range"
-              min="-100"
-              max="100"
-              value="0"
-              class="slider"
-              id="saturationSlider"
-              name="saturationSlider"
-              aria-label="Saturation adjustment"
-            />
           </div>
 
-          <!-- Hue Control -->
-          <div class="control-group">
-            <div class="control-header">
-              <h3>Hue</h3>
+          <div class="shader-section" id="shaderSection">
+            <div class="shader-preview-container">
+              <canvas id="shaderCanvas" class="shader-canvas" aria-label="Animated palette background preview"></canvas>
             </div>
-            <label for="hueSlider" id="hueText" class="slider-label"
-              >Hue: 0&deg;</label
-            >
-            <input
-              type="range"
-              min="0"
-              max="360"
-              value="0"
-              class="slider"
-              id="hueSlider"
-              name="hueSlider"
-              aria-label="Hue adjustment"
-            />
-          </div>
-        </div>
-
-        <div class="image-extract-section tool-section">
-          <h3>Extract Image</h3>
-          <div class="image-upload-area" id="imageDropZone">
-            <input type="file" id="imageInput" accept="image/*" hidden />
-            <p>
-              Drop image
-              <button type="button" class="button button--primary" id="uploadBtn">
-                Browse
-              </button>
-            </p>
-          </div>
-          <canvas id="imageCanvas" hidden></canvas>
-          <div id="extractedColors" class="extracted-colors"></div>
-        </div>
-
-        <div class="colorblind-section tool-section">
-          <h3>Vision Simulation</h3>
-          <div class="colorblind-buttons flex-col">
-            <button type="button" class="button colorblind-btn active" data-mode="normal">
-              Normal
-            </button>
-            <button type="button" class="button colorblind-btn" data-mode="protanopia">
-              Protanopia
-            </button>
-            <button type="button" class="button colorblind-btn" data-mode="deuteranopia">
-              Deuteranopia
-            </button>
-            <button type="button" class="button colorblind-btn" data-mode="tritanopia">
-              Tritanopia
-            </button>
-          </div>
-        </div>
-
-        <div class="ui-preview-section tool-section">
-          <h3>UI Preview</h3>
-          <div class="preview-container">
-            <div class="preview-card" id="previewCard">
-              <div class="preview-header">Title</div>
-              <button type="button" class="preview-button" id="previewButton">Button</button>
-            </div>
-            <div class="preview-nav" id="previewNav">
-              <span class="preview-nav-item active">Home</span>
-              <span class="preview-nav-item">About</span>
+            <div class="shader-controls">
+              <fieldset class="tabs shader-preset-toggle" aria-label="Shader preset">
+                <button type="button" class="tab shader-preset-btn active" data-preset="0">Aurora</button>
+                <button type="button" class="tab shader-preset-btn" data-preset="1">Mesh</button>
+                <button type="button" class="tab shader-preset-btn" data-preset="2">Plasma</button>
+                <button type="button" class="tab shader-preset-btn" data-preset="3">Waves</button>
+                <button type="button" class="tab shader-preset-btn" data-preset="4">Nebula</button>
+                <button type="button" class="tab shader-preset-btn" data-preset="5">Rings</button>
+                <button type="button" class="tab shader-preset-btn" data-preset="6">Dither</button>
+              </fieldset>
+              <div class="shader-speed-control">
+                <label for="shaderSpeed" id="shaderSpeedText" class="control__label">Speed: 1.0x</label>
+                <input type="range" min="0" max="300" value="100" class="slider" id="shaderSpeed" name="shaderSpeed" />
+              </div>
+              <button type="button" id="shaderDownloadBtn" class="btn btn--outline btn--sm">Download PNG</button>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="keyboard-hints">
-          <span class="keyboard-hint-title">Shortcuts:</span>
-          <span class="keyboard-hint"><kbd>Space</kbd> Random</span>
-          <span class="keyboard-hint"><kbd>L</kbd> Lock</span>
-          <span class="keyboard-hint"><kbd>C</kbd> Copy</span>
-          <span class="keyboard-hint"><kbd>Ctrl+Z</kbd> Undo</span>
-          <span class="keyboard-hint"><kbd>Ctrl+Shift+Z</kbd> Redo</span>
-          <span id="lockIndicator" class="lock-indicator">Unlck</span>
+      <!-- ============ 06 From an image ============ -->
+      <section class="chapter" id="image" aria-labelledby="imageTitle">
+        <header class="chapter__head">
+          <span class="chapter__num">06</span>
+          <h2 id="imageTitle" class="chapter__title">From an <em>image</em></h2>
+          <p class="chapter__lede">Drop a photo or screenshot to pull its dominant colors. The image never leaves your browser.</p>
+        </header>
+        <div class="chapter__body">
+          <div class="image-extract-section">
+            <div class="image-upload-area" id="imageDropZone">
+              <input type="file" id="imageInput" accept="image/*" hidden />
+              <img id="imageThumb" class="image-thumb" alt="" hidden />
+              <p class="image-upload-copy">
+                Drop an image here, or
+                <button type="button" class="link-btn" id="uploadBtn">browse your files</button>
+              </p>
+            </div>
+            <canvas id="imageCanvas" hidden></canvas>
+            <div class="extracted">
+              <div id="extractedColors" class="extracted-colors"></div>
+              <button type="button" id="useExtractedBtn" class="btn btn--outline btn--sm" hidden>Use as palette</button>
+            </div>
+          </div>
         </div>
-      </aside>
-    </div>
+      </section>
+    </main>
+
+    <footer class="colophon">
+      <div class="colophon__inner">
+        <p class="colophon__about">
+          Color Studio is free and open source. Everything runs in your browser.
+          <a href="https://github.com/forbiddenlink/color-studio">Source on GitHub</a>
+        </p>
+        <ul class="keyboard-hints" aria-label="Keyboard shortcuts">
+          <li><kbd>Space</kbd> Shuffle</li>
+          <li><kbd>L</kbd> Lock base</li>
+          <li><kbd>C</kbd> Copy modified</li>
+          <li><kbd>E</kbd> Export</li>
+          <li><kbd>Ctrl</kbd><kbd>Z</kbd> Undo</li>
+          <li><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd> Redo</li>
+        </ul>
+      </div>
+    </footer>
+
+    <!-- ============ Export sheet ============ -->
+    <dialog id="exportDialog" class="sheet" aria-labelledby="exportTitle">
+      <div class="sheet__head">
+        <h2 id="exportTitle" class="sheet__title">Export <em>palette</em></h2>
+        <button type="button" id="closeExport" class="icon-btn" aria-label="Close export">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13"/></svg>
+        </button>
+      </div>
+      <div class="sheet__swatches" id="exportSwatches" aria-hidden="true"></div>
+      <div class="tabs export-tabs" role="tablist" aria-label="Export format">
+        <button type="button" role="tab" class="tab active" aria-selected="true" data-format="css" id="exportCss">CSS</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="scss" id="exportScss">SCSS</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="json" id="exportJson">JSON</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="tailwind4" id="exportTailwind4">Tailwind v4</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="tailwind" id="exportTailwind">Tailwind v3</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="shadcn" id="exportShadcn">shadcn/ui</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="daisyui" id="exportDaisyui">DaisyUI</button>
+        <button type="button" role="tab" class="tab" aria-selected="false" data-format="bootstrap" id="exportBootstrap">Bootstrap</button>
+      </div>
+      <div class="sheet__options">
+        <fieldset class="segmented" aria-label="Color notation" id="exportModeGroup">
+          <button type="button" class="segmented__opt active" data-mode="hex" aria-pressed="true">hex</button>
+          <button type="button" class="segmented__opt" data-mode="oklch" aria-pressed="false">oklch</button>
+        </fieldset>
+        <span class="hint" id="exportModeHint">Notation applies to CSS, SCSS, JSON and Tailwind v4.</span>
+      </div>
+      <pre class="code-block"><code id="exportCode"></code></pre>
+      <div class="sheet__actions">
+        <button type="button" id="exportCopy" class="btn btn--primary">Copy code</button>
+        <button type="button" id="exportDownload" class="btn btn--outline">Download file</button>
+      </div>
+      <div class="sheet__share">
+        <span class="label">Share</span>
+        <button type="button" id="copyLink" class="btn btn--outline btn--sm">Copy link</button>
+        <button type="button" id="exportImage" class="btn btn--outline btn--sm">PNG image</button>
+        <button type="button" id="exportSvg" class="btn btn--outline btn--sm">SVG swatches</button>
+      </div>
+    </dialog>
 
     <script src="index.js"></script>
   </body>
