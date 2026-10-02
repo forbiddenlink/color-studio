@@ -59,9 +59,6 @@ const splitComplementaryBtn = document.getElementById('splitComplementaryBtn')
 const squareBtn = document.getElementById('squareBtn')
 const compoundBtn = document.getElementById('compoundBtn')
 const schemeColors = document.getElementById('schemeColors')
-const exportCssBtn = document.getElementById('exportCss')
-const exportScssBtn = document.getElementById('exportScss')
-const exportJsonBtn = document.getElementById('exportJson')
 
 // Constants
 const MAX_HISTORY = 20
@@ -71,9 +68,6 @@ const MAX_UNDO_HISTORY = 50
 const undoStack = []
 let undoPointer = -1
 let isUndoRedoAction = false
-
-// CSS Variable Helper
-const getCSSVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
 // Culori converters
 const toOklch = converter('oklch')
@@ -2031,12 +2025,19 @@ function getColorName(hex) {
 }
 
 // Event Listeners
-toggleBtn.addEventListener('click', () => {
-  toggleBtn.classList.toggle('toggled')
-  lightenText.classList.toggle('unselected')
-  darkenText.classList.toggle('unselected')
+// Brightness direction: 'toggled' on #toggleBtn means darken (read by URL state)
+function setBrightnessMode(mode) {
+  const darken = mode === 'darken'
+  toggleBtn.classList.toggle('toggled', darken)
+  lightenText.classList.toggle('unselected', darken)
+  darkenText.classList.toggle('unselected', !darken)
+  lightenText.setAttribute('aria-pressed', String(!darken))
+  darkenText.setAttribute('aria-pressed', String(darken))
   updateOutputColor()
-})
+}
+
+lightenText.addEventListener('click', () => setBrightnessMode('lighten'))
+darkenText.addEventListener('click', () => setBrightnessMode('darken'))
 
 // Add event listeners for preset colors
 document.querySelectorAll('.preset-color').forEach((btn) => {
@@ -2047,6 +2048,9 @@ document.querySelectorAll('.preset-color').forEach((btn) => {
     updateInputColor(color)
     resetSliders() // Reset sliders to default positions
     updateOutputColor()
+    addToHistory(color)
+    // A new starting point gets a fresh palette built around it
+    displayColorScheme(generateDefaultPalette(color))
     pushUndoState()
   })
 })
@@ -2064,13 +2068,8 @@ hexInput.addEventListener('keyup', (e) => {
     applyColor()
   }
 
-  // Visual feedback on input validity
-  if (isValidHex(hexInput.value)) {
-    hexInput.style.borderColor = getCSSVar('--success-color')
-  } else {
-    hexInput.style.borderColor =
-      hex.length > 0 ? getCSSVar('--error-color') : getCSSVar('--border-color')
-  }
+  // Clear a previous error as soon as the value becomes valid
+  if (isValidHex(hexInput.value)) setHexError('')
 })
 
 applyButton.addEventListener('click', applyColor)
@@ -2085,6 +2084,9 @@ function captureUndoState() {
     saturation: parseInt(saturationSlider.value, 10),
     hue: parseInt(hueSlider.value, 10),
     isDarken: toggleBtn.classList.contains('toggled'),
+    // The palette is part of the work, so Undo after Shuffle brings it back too
+    palette: getPaletteHexes(),
+    locks: paletteLocks.slice(),
   }
   return state
 }
@@ -2130,7 +2132,12 @@ function restoreUndoState(state) {
     darkenText.classList.add('unselected')
   }
 
+  lightenText.setAttribute('aria-pressed', String(!state.isDarken))
+  darkenText.setAttribute('aria-pressed', String(state.isDarken))
+
   updateOutputColor()
+  if (state.palette?.length) displayColorScheme(state.palette, state.locks)
+  else markBaseBand()
   isUndoRedoAction = false
   updateUndoRedoButtons()
 }
@@ -2160,22 +2167,33 @@ function applyColor() {
   const hex = hexInput.value
 
   if (!isValidHex(hex)) {
-    hexInput.style.borderColor = getCSSVar('--error-color')
+    setHexError('Enter a hex color like #3a5a9b or #fa0.')
     return
   }
 
-  const strippedHex = hex.startsWith('#') ? hex : `#${hex}`
+  const normalized = normalizeHex(hex)
 
-  updateInputColor(strippedHex)
+  setHexError('')
+  updateInputColor(normalized)
   updateOutputColor()
-  hexInput.style.borderColor = getCSSVar('--success-color')
+  addToHistory(normalized)
+  markBaseBand()
   pushUndoState()
+}
+
+// Inline, screen-reader-announced validation for the hex field
+function setHexError(message) {
+  const errorEl = document.getElementById('hexError')
+  hexInput.setAttribute('aria-invalid', message ? 'true' : 'false')
+  if (!errorEl) return
+  errorEl.textContent = message
+  errorEl.hidden = !message
 }
 
 // Reset sliders to default positions
 function resetSliders() {
   // Set more moderate default values
-  slider.value = 20 // Reduced from 50 to 20 for less extreme brightness change
+  slider.value = 0 // Start unmodified; 20% lighten turned light bases pure white
   saturationSlider.value = 0 // Keep same saturation
   hueSlider.value = 0 // Keep same hue
 
@@ -2185,11 +2203,11 @@ function resetSliders() {
   hueText.textContent = `Hue: ${hueSlider.value}°`
 
   // Make sure the toggle is set to lighten by default
-  if (toggleBtn.classList.contains('toggled')) {
-    toggleBtn.classList.remove('toggled')
-    lightenText.classList.remove('unselected')
-    darkenText.classList.add('unselected')
-  }
+  toggleBtn.classList.remove('toggled')
+  lightenText.classList.remove('unselected')
+  darkenText.classList.add('unselected')
+  lightenText.setAttribute('aria-pressed', 'true')
+  darkenText.setAttribute('aria-pressed', 'false')
 }
 
 // Update slider event listeners to use immediate feedback
@@ -2217,18 +2235,7 @@ saturationSlider.addEventListener('change', () => pushUndoState())
 hueSlider.addEventListener('change', () => pushUndoState())
 
 copyButton.addEventListener('click', () => {
-  const colorToCopy = alteredColor.style.backgroundColor
-  const tempInput = document.createElement('input')
-  tempInput.value = rgbToHex(colorToCopy)
-  document.body.appendChild(tempInput)
-  tempInput.select()
-  document.execCommand('copy')
-  document.body.removeChild(tempInput)
-
-  copyButton.textContent = 'Copied!'
-  setTimeout(() => {
-    copyButton.textContent = 'Copy Color'
-  }, 1500)
+  copyToClipboard(alteredColorHex.textContent, 'Copied', copyButton)
 })
 
 // Color Conversion Functions
@@ -2568,84 +2575,133 @@ function _getCompoundColors(hsl) {
   })
 }
 
-function displayColorScheme(colors) {
+// Palette state: the bands on the stage. Locked bands survive Shuffle.
+let paletteLocks = []
+
+// Text color for a band: same hue as the swatch, pushed to the far lightness end
+// Picks whichever tinted ink (dark or light) gives the higher WCAG ratio, so small
+// labels on mid-tone bands still clear 4.5:1
+function getBandInkColor(hex) {
+  const o = hexToOklch(hex)
+  const h = o.h || 0
+  const dark = oklchToHex(0.2, Math.min(o.c * 0.6, 0.06), h)
+  const light = oklchToHex(0.98, Math.min(o.c * 0.2, 0.02), h)
+  const bg = hexToRGB(hex)
+  return calculateContrastRatio(hexToRGB(dark), bg) >= calculateContrastRatio(hexToRGB(light), bg)
+    ? dark
+    : light
+}
+
+const ICON_COPY =
+  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M10.5 5V3.5A1.5 1.5 0 0 0 9 2H3.5A1.5 1.5 0 0 0 2 3.5V9a1.5 1.5 0 0 0 1.5 1.5H5"/></svg>'
+const ICON_LOCK =
+  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>'
+const ICON_UNLOCK =
+  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"/></svg>'
+
+function getPaletteHexes() {
+  return Array.from(schemeColors.querySelectorAll('.history-color')).map(
+    (el) => el.dataset.originalHex || rgbToHex(el.style.backgroundColor)
+  )
+}
+
+function useAsBase(color) {
+  hexInput.value = color
+  colorPicker.value = color
+  updateInputColor(color)
+  updateOutputColor()
+  addToHistory(color)
+  markBaseBand()
+  pushUndoState()
+}
+
+// Highlight the band that matches the current base color
+function markBaseBand() {
+  const base = currentColor.hex.toLowerCase()
+  for (const band of schemeColors.querySelectorAll('.band')) {
+    band.classList.toggle('is-base', band.dataset.originalHex === base)
+  }
+}
+
+// '#ABC' / 'abc' / '#aabbcc' -> '#aabbcc'; null when not a hex color
+function normalizeHex(value) {
+  if (!isValidHex(value)) return null
+  let h = value.replace('#', '').toLowerCase()
+  if (h.length === 3) h = h.replace(/./g, '$&$&')
+  return `#${h}`
+}
+
+function displayColorScheme(rawColors, locks) {
+  const colors = rawColors.map(normalizeHex).filter(Boolean)
+  paletteLocks = colors.map((_, i) => Boolean(locks?.[i]))
   schemeColors.innerHTML = ''
-  colors.forEach((color) => {
-    const colorBox = document.createElement('div')
-    colorBox.className = 'history-color'
-    colorBox.style.backgroundColor = color
-    colorBox.title = color
-    colorBox.addEventListener('click', () => {
-      hexInput.value = color
-      colorPicker.value = color
-      updateInputColor(color)
-      updateOutputColor()
-      pushUndoState()
+  colors.forEach((hex, i) => {
+    const name = getColorName(hex)
+    const band = document.createElement('div')
+    band.className = 'band history-color'
+    band.dataset.originalHex = hex
+    band.style.backgroundColor = hex
+    band.style.setProperty('--band-ink', getBandInkColor(hex))
+    band.style.setProperty('--i', i)
+    band.title = hex
+    band.classList.toggle('is-locked', paletteLocks[i])
+    band.setAttribute('role', 'group')
+    band.setAttribute('aria-label', `${name}, ${hex}`)
+    // Static markup only; every palette-derived value goes in via textContent/attributes
+    band.innerHTML = `
+      <div class="band__top">
+        <span class="band__index"></span>
+        <div class="band__tools">
+          <button type="button" class="band__tool" data-action="copy" title="Copy hex">${ICON_COPY}</button>
+          <button type="button" class="band__tool" data-action="lock" title="Lock: keep on Shuffle">${paletteLocks[i] ? ICON_LOCK : ICON_UNLOCK}</button>
+        </div>
+      </div>
+      <div class="band__meta">
+        <button type="button" class="band__name" title="Use as base color"></button>
+        <span class="band__hex"></span>
+        <span class="band__oklch"></span>
+      </div>`
+    band.querySelector('.band__index').textContent = String(i + 1).padStart(2, '0')
+    band.querySelector('.band__name').textContent = name
+    band.querySelector('.band__hex').textContent = hex
+    band.querySelector('.band__oklch').textContent = formatOklchString(hexToOklch(hex))
+    const copyTool = band.querySelector('[data-action="copy"]')
+    copyTool.setAttribute('aria-label', `Copy ${hex}`)
+    const lockTool = band.querySelector('[data-action="lock"]')
+    lockTool.setAttribute('aria-pressed', String(paletteLocks[i]))
+    lockTool.setAttribute('aria-label', `Lock ${name}`)
+    band.querySelector('.band__name').addEventListener('click', () => useAsBase(hex))
+    band.querySelector('[data-action="copy"]').addEventListener('click', () => {
+      copyToClipboard(hex, 'Copied', null)
+      showToast(`Copied ${hex}`)
     })
-    schemeColors.appendChild(colorBox)
+    band.querySelector('[data-action="lock"]').addEventListener('click', (e) => {
+      paletteLocks[i] = !paletteLocks[i]
+      const btn = e.currentTarget
+      btn.setAttribute('aria-pressed', String(paletteLocks[i]))
+      btn.innerHTML = paletteLocks[i] ? ICON_LOCK : ICON_UNLOCK
+      band.classList.toggle('is-locked', paletteLocks[i])
+      if (typeof debouncedUpdateURL === 'function') debouncedUpdateURL()
+    })
+    schemeColors.appendChild(band)
   })
+  markBaseBand()
+  window._updateContrastCheckerFg?.(currentColor.hex)
+  if (currentColorblindMode !== 'normal') updateColorblindSimulation()
+  if (typeof updateGradientPreview === 'function') updateGradientPreview()
+  if (typeof debouncedUpdateURL === 'function') debouncedUpdateURL()
+}
+
+// Mark which scheme tab produced the current palette
+function setActiveScheme(btn) {
+  for (const tab of document.querySelectorAll('.scheme-tabs .tab')) {
+    const on = tab === btn
+    tab.classList.toggle('active', on)
+    tab.setAttribute('aria-pressed', String(on))
+  }
 }
 
 // Export Functions
-function generateCssExport() {
-  const oklchStr = formatOklchString(currentColor.oklch)
-  return `:root {
-    --color-base: ${currentColor.hex};
-    --color-modified: ${alteredColor.style.backgroundColor};
-    --color-rgb: ${currentColor.rgb.r}, ${currentColor.rgb.g}, ${currentColor.rgb.b};
-    --color-hsl: ${currentColor.hsl.h}, ${currentColor.hsl.s}%, ${currentColor.hsl.l}%;
-    --color-oklch: ${oklchStr};
-}`
-}
-
-function generateScssExport() {
-  return `$color-base: ${currentColor.hex};
-$color-modified: ${alteredColor.style.backgroundColor};
-$color-rgb: (
-    r: ${currentColor.rgb.r},
-    g: ${currentColor.rgb.g},
-    b: ${currentColor.rgb.b}
-);
-$color-hsl: (
-    h: ${currentColor.hsl.h},
-    s: ${currentColor.hsl.s}%,
-    l: ${currentColor.hsl.l}%
-);
-$color-oklch: (
-    l: ${(currentColor.oklch.l * 100).toFixed(1)}%,
-    c: ${currentColor.oklch.c.toFixed(3)},
-    h: ${(currentColor.oklch.h || 0).toFixed(1)}
-);`
-}
-
-function generateJsonExport() {
-  const modifiedHex = rgbToHex(alteredColor.style.backgroundColor)
-  const modifiedOklch = hexToOklch(modifiedHex)
-  const colorData = {
-    base: {
-      hex: currentColor.hex,
-      rgb: currentColor.rgb,
-      hsl: currentColor.hsl,
-      oklch: {
-        l: currentColor.oklch.l,
-        c: currentColor.oklch.c,
-        h: currentColor.oklch.h || 0,
-      },
-    },
-    modified: {
-      hex: modifiedHex,
-      rgb: convertHexToRGB(modifiedHex),
-      oklch: {
-        l: modifiedOklch.l,
-        c: modifiedOklch.c,
-        h: modifiedOklch.h || 0,
-      },
-    },
-  }
-  return JSON.stringify(colorData, null, 2)
-}
-
-// Utility Functions
 function copyToClipboard(text, message, buttonElement) {
   // Use modern clipboard API with fallback
   if (navigator.clipboard?.writeText) {
@@ -2712,6 +2768,11 @@ function updateInputColor(hex) {
   // Use enhanced color naming
   colorName.textContent = getColorName(hex)
 
+  // The UI's only accent is the user's own base color
+  document.documentElement.style.setProperty('--active', hex)
+
+  renderScales()
+
   // Sync contrast checker foreground
   if (window._updateContrastCheckerFg) {
     window._updateContrastCheckerFg(hex)
@@ -2761,10 +2822,14 @@ function updateOutputColor() {
 
   // Calculate and show contrast ratio
   const contrast = calculateContrastRatio(currentColor.rgb, modifiedRgb)
-  alteredColorText.textContent = `Contrast Ratio: ${contrast.toFixed(2)}:1`
+  const unchanged = finalHex.toLowerCase() === currentColor.hex.toLowerCase()
+  alteredColorText.textContent = unchanged
+    ? 'Same as original. Move a slider to modify.'
+    : `${contrast.toFixed(2)}:1 against original`
 
-  // Update WCAG badge
+  // Update WCAG badge (meaningless when the two colors are identical)
   updateWCAGBadge(contrast)
+  document.getElementById('wcagBadge')?.toggleAttribute('hidden', unchanged)
 
   // Update modified color name
   if (modifiedColorName) {
@@ -2824,14 +2889,17 @@ const updateColorHistory = () => {
   } else {
     // Show color history
     colorHistoryArray.forEach((hex) => {
-      const colorBox = document.createElement('div')
+      const colorBox = document.createElement('button')
+      colorBox.type = 'button'
       colorBox.className = 'history-color'
       colorBox.style.backgroundColor = hex
       colorBox.title = hex
+      colorBox.setAttribute('aria-label', `Use ${getColorName(hex)} ${hex}`)
       colorBox.addEventListener('click', () => {
         hexInput.value = hex
         updateInputColor(hex)
         updateOutputColor()
+        markBaseBand()
         pushUndoState()
       })
       colorHistory.appendChild(colorBox)
@@ -2847,7 +2915,64 @@ colorPicker.addEventListener('input', (e) => {
   updateOutputColor()
 })
 
-colorPicker.addEventListener('change', () => pushUndoState())
+colorPicker.addEventListener('change', () => {
+  addToHistory(currentColor.hex)
+  markBaseBand()
+  pushUndoState()
+})
+
+// ==========================================
+// SCALE: 50-950 ramps of the base and a matching neutral
+// ==========================================
+function renderScaleInto(listEl, scale, label) {
+  if (!listEl) return
+  const white = { r: 255, g: 255, b: 255 }
+  const black = { r: 0, g: 0, b: 0 }
+  listEl.replaceChildren(
+    ...SCALE_STEPS.map((step) => {
+      const hex = scale[step]
+      const rgb = hexToRGB(hex)
+      const onWhite = calculateContrastRatio(rgb, white)
+      const onBlack = calculateContrastRatio(rgb, black)
+      const li = document.createElement('li')
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = 'scale__step'
+      btn.style.backgroundColor = hex
+      btn.style.color = onWhite > onBlack ? '#ffffff' : '#111111'
+      // Visible text stays inside the accessible name (WCAG 2.5.3)
+      const verb = document.createElement('span')
+      verb.className = 'sr-only'
+      verb.textContent = `Copy ${label.toLowerCase()} `
+      const num = document.createElement('span')
+      num.className = 'scale__num'
+      num.textContent = step
+      const meta = document.createElement('span')
+      meta.className = 'scale__ratio'
+      meta.textContent = `${hex}\n${onWhite.toFixed(1)} / ${onBlack.toFixed(1)}`
+      btn.append(verb, num, meta)
+      btn.addEventListener('click', () => {
+        copyToClipboard(hex, 'Copied', null)
+        showToast(`Copied ${label.toLowerCase()}-${step} ${hex}`)
+      })
+      li.append(btn)
+      return li
+    })
+  )
+}
+
+function renderScales() {
+  renderScaleInto(
+    document.getElementById('scaleBase'),
+    generateColorScale(currentColor.hex),
+    'Primary'
+  )
+  renderScaleInto(
+    document.getElementById('scaleNeutral'),
+    generateColorScale(getNeutralSeed(currentColor.hex)),
+    'Neutral'
+  )
+}
 
 clearHistoryBtn.addEventListener('click', () => {
   colorHistoryArray = []
@@ -2860,89 +2985,261 @@ clearHistoryBtn.addEventListener('click', () => {
 })
 
 // Color Scheme Generators - Using OKLCH for perceptually uniform color harmony
-complementaryBtn.addEventListener('click', () => {
-  const complementary = getComplementaryColorOklch(currentColor.oklch)
-  displayColorScheme([currentColor.hex, complementary])
-})
+const schemeBuilders = {
+  complementary: () => [currentColor.hex, getComplementaryColorOklch(currentColor.oklch)],
+  analogous: () => [currentColor.hex, ...getAnalogousColorsOklch(currentColor.oklch)],
+  triadic: () => [currentColor.hex, ...getTriadicColorsOklch(currentColor.oklch)],
+  split: () => [currentColor.hex, ...getSplitComplementaryColorsOklch(currentColor.oklch)],
+  square: () => [currentColor.hex, ...getSquareColorsOklch(currentColor.oklch)],
+  compound: () => [currentColor.hex, ...getCompoundColorsOklch(currentColor.oklch)],
+}
 
-analogousBtn.addEventListener('click', () => {
-  const analogous = getAnalogousColorsOklch(currentColor.oklch)
-  displayColorScheme([currentColor.hex, ...analogous])
-})
-
-triadicBtn.addEventListener('click', () => {
-  const triadic = getTriadicColorsOklch(currentColor.oklch)
-  displayColorScheme([currentColor.hex, ...triadic])
-})
-
-splitComplementaryBtn.addEventListener('click', () => {
-  const splitComp = getSplitComplementaryColorsOklch(currentColor.oklch)
-  displayColorScheme([currentColor.hex, ...splitComp])
-})
-
-if (squareBtn) {
-  squareBtn.addEventListener('click', () => {
-    const square = getSquareColorsOklch(currentColor.oklch)
-    displayColorScheme([currentColor.hex, ...square])
+for (const btn of [
+  complementaryBtn,
+  analogousBtn,
+  triadicBtn,
+  splitComplementaryBtn,
+  squareBtn,
+  compoundBtn,
+]) {
+  if (!btn) continue
+  btn.addEventListener('click', () => {
+    const build = schemeBuilders[btn.dataset.scheme]
+    if (!build) return
+    displayColorScheme(build())
+    setActiveScheme(btn)
+    pushUndoState()
   })
 }
 
-compoundBtn.addEventListener('click', () => {
-  const compound = getCompoundColorsOklch(currentColor.oklch)
-  displayColorScheme([currentColor.hex, ...compound])
-})
+// ==========================================
+// EXPORT SHEET
+// ==========================================
+const SCALE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
 
-// Export Buttons
-exportCssBtn.addEventListener('click', (e) => {
-  const css = generateCssExport()
-  copyToClipboard(css, 'Copied!', e.target)
-})
-
-exportScssBtn.addEventListener('click', (e) => {
-  const scss = generateScssExport()
-  copyToClipboard(scss, 'Copied!', e.target)
-})
-
-exportJsonBtn.addEventListener('click', (e) => {
-  const json = generateJsonExport()
-  copyToClipboard(json, 'Copied!', e.target)
-})
-
-// Tailwind Export Button
-const exportTailwindBtn = document.getElementById('exportTailwind')
-if (exportTailwindBtn) {
-  exportTailwindBtn.addEventListener('click', (e) => {
-    const tailwind = generateTailwindExport()
-    copyToClipboard(tailwind, 'Copied!', e.target)
-  })
+// Low-chroma seed in the base hue, so the neutral scale is warm/cool to match
+function getNeutralSeed(hex) {
+  const o = hexToOklch(hex)
+  return oklchToHex(0.55, Math.min(o.c, 0.02), o.h || 0)
 }
 
-// shadcn/ui Export Button
-const exportShadcnBtn = document.getElementById('exportShadcn')
-if (exportShadcnBtn) {
-  exportShadcnBtn.addEventListener('click', (e) => {
-    const shadcn = generateShadcnExport()
-    copyToClipboard(shadcn, 'Copied!', e.target)
-  })
+function getExportTokens() {
+  const palette = getPaletteHexes()
+  const base = currentColor.hex
+  const modified = rgbToHex(alteredColor.style.backgroundColor) || base
+  return {
+    palette: palette.length ? palette : [base],
+    base,
+    modified,
+    primary: generateColorScale(base),
+    neutral: generateColorScale(getNeutralSeed(base)),
+  }
 }
 
-// DaisyUI Export Button
-const exportDaisyuiBtn = document.getElementById('exportDaisyui')
-if (exportDaisyuiBtn) {
-  exportDaisyuiBtn.addEventListener('click', (e) => {
-    const daisyui = generateDaisyUIExport()
-    copyToClipboard(daisyui, 'Copied!', e.target)
-  })
+function formatColorValue(hex, mode) {
+  return mode === 'oklch' ? formatOklchString(hexToOklch(hex)) : hex
 }
 
-// Bootstrap Export Button
-const exportBootstrapBtn = document.getElementById('exportBootstrap')
-if (exportBootstrapBtn) {
-  exportBootstrapBtn.addEventListener('click', (e) => {
-    const bootstrap = generateBootstrapExport()
-    copyToClipboard(bootstrap, 'Copied!', e.target)
+function generateCssExport(mode = 'hex') {
+  const t = getExportTokens()
+  const v = (hex) => formatColorValue(hex, mode)
+  const lines = [':root {', '  /* Palette */']
+  t.palette.forEach((hex, i) => {
+    lines.push(`  --palette-${i + 1}: ${v(hex)}; /* ${getColorName(hex)} */`)
   })
+  lines.push(
+    `  --base: ${v(t.base)};`,
+    `  --modified: ${v(t.modified)};`,
+    '',
+    '  /* Primary scale */'
+  )
+  for (const s of SCALE_STEPS) lines.push(`  --primary-${s}: ${v(t.primary[s])};`)
+  lines.push('', '  /* Neutral scale */')
+  for (const s of SCALE_STEPS) lines.push(`  --neutral-${s}: ${v(t.neutral[s])};`)
+  lines.push('}')
+  return lines.join('\n')
 }
+
+function generateScssExport(mode = 'hex') {
+  const t = getExportTokens()
+  const v = (hex) => formatColorValue(hex, mode)
+  const lines = ['// Palette']
+  t.palette.forEach((hex, i) => {
+    lines.push(`$palette-${i + 1}: ${v(hex)}; // ${getColorName(hex)}`)
+  })
+  lines.push(`$base: ${v(t.base)};`, `$modified: ${v(t.modified)};`, '', '$primary: (')
+  for (const s of SCALE_STEPS) lines.push(`  ${s}: ${v(t.primary[s])},`)
+  lines.push(');', '', '$neutral: (')
+  for (const s of SCALE_STEPS) lines.push(`  ${s}: ${v(t.neutral[s])},`)
+  lines.push(');')
+  return lines.join('\n')
+}
+
+function generateJsonExport(mode = 'hex') {
+  const t = getExportTokens()
+  const v = (hex) => formatColorValue(hex, mode)
+  const scale = (obj) => Object.fromEntries(SCALE_STEPS.map((s) => [s, v(obj[s])]))
+  return JSON.stringify(
+    {
+      palette: t.palette.map((hex) => ({ name: getColorName(hex), value: v(hex) })),
+      base: v(t.base),
+      modified: v(t.modified),
+      primary: scale(t.primary),
+      neutral: scale(t.neutral),
+    },
+    null,
+    2
+  )
+}
+
+function generateTailwind4Export(mode = 'hex') {
+  const t = getExportTokens()
+  const v = (hex) => formatColorValue(hex, mode)
+  const lines = ['/* app.css (Tailwind CSS v4) */', '@import "tailwindcss";', '', '@theme {']
+  t.palette.forEach((hex, i) => {
+    lines.push(`  --color-palette-${i + 1}: ${v(hex)}; /* ${getColorName(hex)} */`)
+  })
+  lines.push('')
+  for (const s of SCALE_STEPS) lines.push(`  --color-primary-${s}: ${v(t.primary[s])};`)
+  lines.push('')
+  for (const s of SCALE_STEPS) lines.push(`  --color-neutral-${s}: ${v(t.neutral[s])};`)
+  lines.push('}')
+  return lines.join('\n')
+}
+
+const exportFormats = {
+  css: { gen: generateCssExport, file: 'color-studio.css', type: 'text/css', modes: true },
+  scss: { gen: generateScssExport, file: '_color-studio.scss', type: 'text/x-scss', modes: true },
+  json: {
+    gen: generateJsonExport,
+    file: 'color-studio.json',
+    type: 'application/json',
+    modes: true,
+  },
+  tailwind4: { gen: generateTailwind4Export, file: 'app.css', type: 'text/css', modes: true },
+  tailwind: {
+    gen: () => generateTailwindExport(),
+    file: 'tailwind.config.js',
+    type: 'text/javascript',
+  },
+  shadcn: { gen: () => generateShadcnExport(), file: 'globals.css', type: 'text/css' },
+  daisyui: {
+    gen: () => generateDaisyUIExport(),
+    file: 'daisyui.config.js',
+    type: 'text/javascript',
+  },
+  bootstrap: { gen: () => generateBootstrapExport(), file: '_variables.scss', type: 'text/x-scss' },
+}
+
+const exportState = { format: 'css', mode: 'hex' }
+
+function getExportCode() {
+  const f = exportFormats[exportState.format]
+  return f.gen(exportState.mode)
+}
+
+function renderExportSheet() {
+  const codeEl = document.getElementById('exportCode')
+  const swatches = document.getElementById('exportSwatches')
+  const modeGroup = document.getElementById('exportModeGroup')
+  if (!codeEl) return
+  codeEl.textContent = getExportCode()
+  if (swatches) {
+    swatches.replaceChildren(
+      ...getExportTokens().palette.map((hex) => {
+        const s = document.createElement('span')
+        s.style.backgroundColor = hex
+        return s
+      })
+    )
+  }
+  if (modeGroup) {
+    const supports = Boolean(exportFormats[exportState.format].modes)
+    for (const b of modeGroup.querySelectorAll('.segmented__opt')) {
+      b.disabled = !supports
+      const on = b.dataset.mode === exportState.mode
+      b.classList.toggle('active', on)
+      b.setAttribute('aria-pressed', String(on))
+    }
+  }
+}
+
+function downloadText(text, filename, type) {
+  const blob = new Blob([text], { type })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+function exportPaletteAsSvg() {
+  const colors = getExportTokens().palette
+  const w = 160
+  const h = 220
+  const parts = colors.map((hex, i) => {
+    const x = i * w
+    const ink = getBandInkColor(hex)
+    const name = getColorName(hex).replace(/[<&>"]/g, '')
+    return `<g><rect x="${x}" y="0" width="${w}" height="${h}" fill="${hex}"/><text x="${x + 12}" y="${h - 36}" fill="${ink}" font-family="Georgia, serif" font-size="18">${name}</text><text x="${x + 12}" y="${h - 14}" fill="${ink}" font-family="monospace" font-size="13">${hex}</text></g>`
+  })
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${colors.length * w}" height="${h}" viewBox="0 0 ${colors.length * w} ${h}">${parts.join('')}</svg>`
+  downloadText(svg, 'color-studio-palette.svg', 'image/svg+xml')
+  showToast('SVG downloaded')
+}
+
+function openExportSheet() {
+  const dialog = document.getElementById('exportDialog')
+  if (!dialog || dialog.open) return
+  renderExportSheet()
+  dialog.showModal()
+}
+
+function initExportSheet() {
+  const dialog = document.getElementById('exportDialog')
+  if (!dialog) return
+  document.getElementById('openExport')?.addEventListener('click', openExportSheet)
+  document.getElementById('closeExport')?.addEventListener('click', () => dialog.close())
+  // Click on the backdrop closes the sheet
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close()
+  })
+
+  const tabs = dialog.querySelectorAll('.export-tabs .tab')
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => {
+      exportState.format = tab.dataset.format
+      for (const t of tabs) {
+        const on = t === tab
+        t.classList.toggle('active', on)
+        t.setAttribute('aria-selected', String(on))
+      }
+      renderExportSheet()
+    })
+  }
+
+  for (const b of dialog.querySelectorAll('#exportModeGroup .segmented__opt')) {
+    b.addEventListener('click', () => {
+      exportState.mode = b.dataset.mode
+      renderExportSheet()
+    })
+  }
+
+  document.getElementById('exportCopy')?.addEventListener('click', (e) => {
+    copyToClipboard(getExportCode(), 'Copied', e.currentTarget)
+  })
+  document.getElementById('exportDownload')?.addEventListener('click', () => {
+    const f = exportFormats[exportState.format]
+    downloadText(getExportCode(), f.file, f.type)
+    showToast(`Downloaded ${f.file}`)
+  })
+  document.getElementById('exportSvg')?.addEventListener('click', exportPaletteAsSvg)
+}
+
+document.addEventListener('DOMContentLoaded', initExportSheet)
 
 // ==========================================
 // GRADIENT GENERATOR
@@ -3374,6 +3671,9 @@ document.addEventListener('DOMContentLoaded', () => {
   resetSliders() // This will set default modifications
   updateOutputColor()
   updateColorHistory()
+  displayColorScheme(generateDefaultPalette(initialColor))
+
+  initThemeToggle()
 
   // Push initial state to undo stack
   pushUndoState()
@@ -3384,8 +3684,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize gradient generator
   initGradientGenerator()
 
-  // Initialize palette-driven shader background
-  initShaderBackground()
+  // Initialize palette-driven shader background only when its section nears the
+  // viewport: compiling WebGL programs at startup blocked the main thread on phones
+  const shaderSection = document.getElementById('shaderSection')
+  if (shaderSection && 'IntersectionObserver' in window) {
+    const lazy = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          lazy.disconnect()
+          initShaderBackground()
+        }
+      },
+      { rootMargin: '400px 0px' }
+    )
+    lazy.observe(shaderSection)
+  } else {
+    initShaderBackground()
+  }
 })
 
 // ==========================================
@@ -3431,6 +3746,10 @@ function initKeyboardShortcuts() {
         e.preventDefault()
         copyModifiedColor()
         break
+      case 'e': // E = Open the export sheet
+        e.preventDefault()
+        openExportSheet()
+        break
     }
   })
 
@@ -3446,7 +3765,7 @@ function toggleColorLock() {
   const lockIndicator = document.getElementById('lockIndicator')
   if (lockIndicator) {
     lockIndicator.classList.toggle('active', isColorLocked)
-    lockIndicator.textContent = isColorLocked ? 'Locked' : 'Unlocked'
+    lockIndicator.textContent = isColorLocked ? 'Base locked' : 'Base unlocked'
   }
 
   // Disable/enable input controls
@@ -3532,34 +3851,44 @@ function updateWCAGBadge(contrastRatio) {
 // ==========================================
 // FEATURE 3: Random Palette Generator
 // ==========================================
+// Five swatches around a base in OKLCH: light tint, two neighbours, the base, a deep shade.
+// Ordered light to dark so the stage reads as a considered set, not a random row.
+function generateDefaultPalette(hex, spread = 28) {
+  const o = hexToOklch(hex)
+  const h = o.h || 0
+  const c = o.c || 0
+  return [
+    oklchToHex(Math.min(o.l + 0.22, 0.96), c * 0.45, h),
+    oklchToHex(Math.min(o.l + 0.06, 0.92), c, (h - spread + 360) % 360),
+    hex,
+    oklchToHex(Math.max(o.l - 0.12, 0.3), c, (h + spread) % 360),
+    oklchToHex(Math.max(o.l - 0.42, 0.18), Math.min(c * 0.9, 0.12), h),
+  ]
+}
+
 function generateRandomPalette() {
-  if (isColorLocked) {
-    showToast('Color is locked')
-    return
+  // The base lock keeps the base color; per-band locks keep their band
+  const baseHex = isColorLocked
+    ? currentColor.hex
+    : oklchToHex(0.55 + Math.random() * 0.25, 0.07 + Math.random() * 0.11, Math.random() * 360)
+  const fresh = generateDefaultPalette(baseHex, 18 + Math.random() * 40)
+  const previous = getPaletteHexes()
+  const locks = paletteLocks.slice()
+  const merged = fresh.map((hex, i) => (locks[i] && previous[i] ? previous[i] : hex))
+
+  if (!isColorLocked) {
+    const nextBase = merged[2]
+    hexInput.value = nextBase
+    colorPicker.value = nextBase
+    updateInputColor(nextBase)
+    resetSliders()
+    updateOutputColor()
   }
 
-  // Generate random base hue
-  const randomHue = Math.floor(Math.random() * 360)
-  const randomSaturation = 50 + Math.floor(Math.random() * 40) // 50-90%
-  const randomLightness = 40 + Math.floor(Math.random() * 30) // 40-70%
-
-  // Convert to RGB then to HEX
-  const rgb = hslToRGB(randomHue, randomSaturation, randomLightness)
-  const hex = convertRGBToHex(rgb.r, rgb.g, rgb.b)
-
-  // Update the color
-  hexInput.value = hex
-  colorPicker.value = hex
-  updateInputColor(hex)
-  resetSliders()
-  updateOutputColor()
-
-  // Generate a 5-color palette using analogous scheme
-  const palette = generateHarmoniousPalette(randomHue, randomSaturation, randomLightness)
-  displayColorScheme(palette)
-
+  displayColorScheme(merged, locks)
+  setActiveScheme(null)
   pushUndoState()
-  showToast('Random palette generated')
+  showToast(locks.some(Boolean) ? 'Shuffled, locked colors kept' : 'Shuffled')
 }
 
 function generateHarmoniousPalette(baseHue, baseSat, baseLight) {
@@ -3591,39 +3920,32 @@ function generateHarmoniousPalette(baseHue, baseSat, baseLight) {
 // FEATURE 4: Tailwind Export
 // ==========================================
 function generateTailwindExport() {
-  const modifiedHex = rgbToHex(alteredColor.style.backgroundColor)
-  const _baseHsl = currentColor.hsl
+  const t = getExportTokens()
+  const scale = (obj, indent) => SCALE_STEPS.map((s) => `${indent}${s}: '${obj[s]}',`).join('\n')
+  const palette = t.palette
+    .map((hex, i) => `        ${i + 1}: '${hex}', // ${getColorName(hex)}`)
+    .join('\n')
 
-  // Generate a full color scale (50-950)
-  const shades = generateColorScale(currentColor.hex)
-
-  const colorName = getColorName(currentColor.hex).toLowerCase().replace(/\s+/g, '-')
-
-  const tailwindConfig = `// tailwind.config.js
+  return `// tailwind.config.js (Tailwind CSS v3)
 module.exports = {
   theme: {
     extend: {
       colors: {
-        '${colorName}': {
-          50: '${shades[50]}',
-          100: '${shades[100]}',
-          200: '${shades[200]}',
-          300: '${shades[300]}',
-          400: '${shades[400]}',
-          500: '${shades[500]}',
-          600: '${shades[600]}',
-          700: '${shades[700]}',
-          800: '${shades[800]}',
-          900: '${shades[900]}',
-          950: '${shades[950]}',
+        palette: {
+${palette}
         },
-        'modified': '${modifiedHex}',
+        primary: {
+${scale(t.primary, '          ')}
+          DEFAULT: '${t.base}',
+        },
+        neutral: {
+${scale(t.neutral, '          ')}
+        },
+        modified: '${t.modified}',
       },
     },
   },
 }`
-
-  return tailwindConfig
 }
 
 function generateColorScale(hex) {
@@ -4041,6 +4363,12 @@ function processImageFile(file) {
   reader.onload = (e) => {
     const img = new Image()
     img.onload = () => {
+      const thumb = document.getElementById('imageThumb')
+      if (thumb) {
+        thumb.src = img.src
+        thumb.alt = `Uploaded image: ${file.name}`
+        thumb.hidden = false
+      }
       try {
         extractColorsFromImage(img)
       } catch (err) {
@@ -4203,8 +4531,22 @@ function medianCutQuantize(pixels, numColors) {
 function displayExtractedColors(colors) {
   extractedColors.innerHTML = ''
 
+  const useBtn = document.getElementById('useExtractedBtn')
+  if (useBtn) {
+    useBtn.hidden = colors.length === 0
+    useBtn.onclick = () => {
+      displayColorScheme(colors)
+      setActiveScheme(null)
+      pushUndoState()
+      showToast('Image colors are now the palette')
+      document.querySelector('.stage')?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
   colors.forEach((hex) => {
-    const colorSwatch = document.createElement('div')
+    const colorSwatch = document.createElement('button')
+    colorSwatch.type = 'button'
+    colorSwatch.setAttribute('aria-label', `Use ${hex} as base color`)
     colorSwatch.className = 'extracted-color'
     colorSwatch.style.backgroundColor = hex
     colorSwatch.setAttribute('data-hex', hex)
@@ -4464,11 +4806,18 @@ function initColorblindSimulation() {
       // Update active state
       buttons.forEach((b) => {
         b.classList.remove('active')
+        b.setAttribute('aria-pressed', 'false')
       })
       btn.classList.add('active')
+      btn.setAttribute('aria-pressed', 'true')
 
       // Set mode and update display
       currentColorblindMode = btn.dataset.mode
+      const simIndicator = document.getElementById('simIndicator')
+      if (simIndicator) {
+        simIndicator.hidden = currentColorblindMode === 'normal'
+        simIndicator.textContent = `Simulating ${btn.textContent.trim().toLowerCase()}`
+      }
 
       // If switching back to normal, restore original colors
       if (currentColorblindMode === 'normal') {
@@ -4550,6 +4899,14 @@ function updateURL() {
   params.set('saturation', saturationSlider.value)
   params.set('hue', hueSlider.value)
 
+  // Full palette + which bands are locked (additive; old links without p still work)
+  const palette = getPaletteHexes()
+  if (palette.length) {
+    params.set('p', palette.map((h) => h.replace('#', '')).join('-'))
+    const locked = paletteLocks.map((on, i) => (on ? i : -1)).filter((i) => i >= 0)
+    if (locked.length) params.set('lock', locked.join('.'))
+  }
+
   // Add toggle state (lighten/darken)
   const isDarken = toggleBtn.classList.contains('toggled')
   if (isDarken) {
@@ -4613,6 +4970,24 @@ function loadFromURL() {
 
       // Update output color with restored settings
       updateOutputColor()
+
+      // Restore the palette when the link carries one
+      if (params.has('p')) {
+        const hexes = params
+          .get('p')
+          .split('-')
+          .map((h) => normalizeHex(h))
+          .filter(Boolean)
+          .slice(0, 12)
+        const lockSet = new Set((params.get('lock') || '').split('.').map(Number))
+        if (hexes.length)
+          displayColorScheme(
+            hexes,
+            hexes.map((_, i) => lockSet.has(i))
+          )
+      } else {
+        displayColorScheme(generateDefaultPalette(hex))
+      }
 
       return true // Indicates state was loaded from URL
     }
@@ -4747,66 +5122,41 @@ function exportPaletteAsImage() {
   canvas.height = HEIGHT
   const ctx = canvas.getContext('2d')
 
-  // Background
-  ctx.fillStyle = '#101014'
+  // Paper ground, matching the app's Specimen look
+  ctx.fillStyle = '#f7f6f2'
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
 
-  // Layout
-  const padding = 60
-  const topArea = 80
-  const bottomArea = 80
-  const swatchAreaTop = topArea + 30
-  const swatchAreaBottom = HEIGHT - bottomArea - 60
-  const swatchHeight = swatchAreaBottom - swatchAreaTop
-  const totalSwatchWidth = WIDTH - padding * 2
-  const gap = 16
-  const numColors = colors.length
-  const swatchWidth = (totalSwatchWidth - gap * (numColors - 1)) / numColors
-
-  // Draw swatches
+  // Full-bleed bands like the stage, with names set in each band's own ink
+  const pad = 48
+  const top = 48
+  const bottom = HEIGHT - 84
+  const bandWidth = (WIDTH - pad * 2) / colors.length
   colors.forEach((color, i) => {
-    const x = padding + i * (swatchWidth + gap)
-    const y = swatchAreaTop
-
-    // Swatch rectangle with rounded corners
-    const radius = 12
-    ctx.beginPath()
-    ctx.moveTo(x + radius, y)
-    ctx.lineTo(x + swatchWidth - radius, y)
-    ctx.quadraticCurveTo(x + swatchWidth, y, x + swatchWidth, y + radius)
-    ctx.lineTo(x + swatchWidth, y + swatchHeight - radius)
-    ctx.quadraticCurveTo(
-      x + swatchWidth,
-      y + swatchHeight,
-      x + swatchWidth - radius,
-      y + swatchHeight
-    )
-    ctx.lineTo(x + radius, y + swatchHeight)
-    ctx.quadraticCurveTo(x, y + swatchHeight, x, y + swatchHeight - radius)
-    ctx.lineTo(x, y + radius)
-    ctx.quadraticCurveTo(x, y, x + radius, y)
-    ctx.closePath()
+    const x = pad + i * bandWidth
     ctx.fillStyle = color.hex
-    ctx.fill()
+    ctx.fillRect(x, top, Math.ceil(bandWidth), bottom - top)
 
-    // Hex value below swatch
-    ctx.fillStyle = '#eeeef0'
-    ctx.font = '500 16px "JetBrains Mono", monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText(color.hex.toUpperCase(), x + swatchWidth / 2, swatchAreaBottom + 24)
-
-    // Color name below hex
-    ctx.fillStyle = '#9090a0'
-    ctx.font = '400 13px "Inter", sans-serif'
-    const truncName = color.name.length > 16 ? `${color.name.slice(0, 15)}\u2026` : color.name
-    ctx.fillText(truncName, x + swatchWidth / 2, swatchAreaBottom + 44)
+    const ink = getBandInkColor(color.hex)
+    ctx.fillStyle = ink
+    ctx.textAlign = 'left'
+    ctx.font = '400 30px "Instrument Serif", Georgia, serif'
+    const name = color.name.length > 18 ? `${color.name.slice(0, 17)}\u2026` : color.name
+    ctx.fillText(name, x + 18, bottom - 46)
+    ctx.font = '500 16px "Geist Mono", ui-monospace, monospace'
+    ctx.fillText(color.hex.toLowerCase(), x + 18, bottom - 20)
   })
 
-  // Watermark at bottom
-  ctx.fillStyle = '#60606d'
-  ctx.font = '500 14px "Inter", sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText('Color Studio', WIDTH / 2, HEIGHT - 24)
+  // Wordmark
+  ctx.fillStyle = '#22201c'
+  ctx.textAlign = 'left'
+  ctx.font = '600 18px "Geist", system-ui, sans-serif'
+  ctx.fillText('Color', pad, HEIGHT - 34)
+  ctx.font = 'italic 400 22px "Instrument Serif", Georgia, serif'
+  ctx.fillText('Studio', pad + 52, HEIGHT - 34)
+  ctx.textAlign = 'right'
+  ctx.font = '400 13px "Geist Mono", ui-monospace, monospace'
+  ctx.fillStyle = '#6b6862'
+  ctx.fillText('color-studio-mu.vercel.app', WIDTH - pad, HEIGHT - 36)
 
   // Download
   canvas.toBlob((blob) => {
@@ -4954,11 +5304,28 @@ function initContrastChecker() {
 
   updateContrastDisplay()
 
+  // The base color becomes the background; the text starts as the palette color
+  // that reads best on it (falls back to near-black / near-white)
   window._updateContrastCheckerFg = (hex) => {
-    fgInput.value = hex
-    fgPicker.value = hex
+    const bgRgb = hexToRGB(hex)
+    const candidates = [...getPaletteHexes(), '#111111', '#ffffff'].filter((c) => c !== hex)
+    let best = candidates[0]
+    let bestRatio = 0
+    for (const c of candidates) {
+      const r = calculateContrastRatio(hexToRGB(c), bgRgb)
+      // Prefer a palette color once it clears AA; otherwise keep the highest ratio
+      if ((r >= 4.5 && bestRatio < 4.5) || (r > bestRatio && !(bestRatio >= 4.5))) {
+        best = c
+        bestRatio = r
+      }
+    }
+    bgInput.value = hex
+    bgPicker.value = hex
+    fgInput.value = best
+    fgPicker.value = best
     updateContrastDisplay()
   }
+  window._updateContrastCheckerFg(currentColor.hex)
 }
 
 // =============================================================================
@@ -5202,11 +5569,7 @@ function setGaugeArc(arcId, percent) {
   arc.style.strokeDasharray = `${circumference}`
   arc.style.strokeDashoffset = `${offset}`
 
-  if (arcId !== 'harmonyArc') {
-    if (percent >= 70) arc.style.stroke = 'var(--success-color)'
-    else if (percent >= 40) arc.style.stroke = 'var(--warning-color)'
-    else arc.style.stroke = 'var(--error-color)'
-  }
+  arc.style.stroke = percent < 40 && arcId !== 'harmonyArc' ? 'var(--signal)' : 'var(--ink)'
 }
 
 function updateHarmonyScoring() {
@@ -5352,4 +5715,32 @@ export {
   oklchToHex,
   rgbToHex,
   rgbToHSL,
+}
+
+// =============================================================================
+// THEME: system default, manual override stored per browser
+// =============================================================================
+function initThemeToggle() {
+  const btn = document.getElementById('themeToggle')
+  if (!btn) return
+  const root = document.documentElement
+  const media = window.matchMedia?.('(prefers-color-scheme: dark)')
+  const isDark = () =>
+    root.dataset.theme ? root.dataset.theme === 'dark' : Boolean(media?.matches)
+  const sync = () => {
+    btn.setAttribute('aria-label', isDark() ? 'Switch to light theme' : 'Switch to dark theme')
+  }
+  btn.addEventListener('click', () => {
+    root.dataset.theme = isDark() ? 'light' : 'dark'
+    try {
+      localStorage.setItem('cs-theme', root.dataset.theme)
+    } catch (_e) {
+      // Storage can be unavailable (private mode); the toggle still works for this visit
+    }
+    sync()
+    if (typeof updateMockupPreviews === 'function') updateMockupPreviews()
+    if (typeof updateUIPreview === 'function') updateUIPreview()
+  })
+  media?.addEventListener?.('change', sync)
+  sync()
 }

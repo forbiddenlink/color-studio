@@ -1,7 +1,7 @@
 // Service Worker for Color Studio PWA
 // Version: 1.0.0
 
-const CACHE_NAME = 'color-studio-v2'
+const CACHE_NAME = 'color-studio-v3'
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -13,8 +13,7 @@ const STATIC_ASSETS = [
 
 // External resources to cache
 const EXTERNAL_ASSETS = [
-  'https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+  'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap',
 ]
 
 // Install event - cache static assets
