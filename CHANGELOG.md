@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0](https://github.com/forbiddenlink/color-studio/compare/v1.0.4...v1.1.0) (2026-10-02)
+
+
+### Features
+
+* **design:** Specimen redesign with full-palette export ([#72](https://github.com/forbiddenlink/color-studio/issues/72)) ([268156a](https://github.com/forbiddenlink/color-studio/commit/268156a1a742e0bb30c4b130bb400d5338c5169d))
+* edit palettes, contrast grid, semantic theme export, library, eyedropper ([#75](https://github.com/forbiddenlink/color-studio/issues/75)) ([9146f56](https://github.com/forbiddenlink/color-studio/commit/9146f56f4ead60841f97617087d7889c9bd88a78))
+
+
+### Bug Fixes
+
+* **deps:** apply override fix plan ([#71](https://github.com/forbiddenlink/color-studio/issues/71)) ([6782783](https://github.com/forbiddenlink/color-studio/commit/6782783e4faef6c48888888b9aef2fe730ddb078))
+* let the service worker install and give the PWA real icons ([#70](https://github.com/forbiddenlink/color-studio/issues/70)) ([6eeff0f](https://github.com/forbiddenlink/color-studio/commit/6eeff0f2bdce435450736bbab170d02665ecd8b6))
+* **pwa:** stop the service worker proxying Google Fonts ([#73](https://github.com/forbiddenlink/color-studio/issues/73)) ([671e3ed](https://github.com/forbiddenlink/color-studio/commit/671e3ede76a6fc754683a515991cca085f2b522d))
+* ship the favicon sizes index.html declares ([#68](https://github.com/forbiddenlink/color-studio/issues/68)) ([b145394](https://github.com/forbiddenlink/color-studio/commit/b14539495b7703cb61d5e8fd5bee00376559c8e8))
+
 ## [1.0.4](https://github.com/forbiddenlink/color-studio/compare/v1.0.3...v1.0.4) (2026-09-21)
 
 
