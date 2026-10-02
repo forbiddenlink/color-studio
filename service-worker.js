@@ -1,13 +1,13 @@
 // Service Worker for Color Studio PWA
 // Version: 1.0.0
 
-const CACHE_NAME = 'color-studio-v1'
+const CACHE_NAME = 'color-studio-v2'
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/index.js',
   '/index.css',
-  '/favicon.svg',
+  '/favicon.png',
   '/manifest.json',
 ]
 
