@@ -3,6 +3,21 @@
 // Culori - Modern color manipulation library with OKLCH support
 import { clampChroma, converter, formatHex, interpolate, parse } from 'culori'
 import posthog from 'posthog-js'
+import {
+  contrastMatrix,
+  gamutInfo,
+  generateSemanticTheme,
+  MAX_PALETTE,
+  MIN_PALETTE,
+  moveItem,
+  nextColorAfter,
+  parsePaletteInput,
+  readLibrary,
+  removeFromLibrary,
+  saveToLibrary,
+  themeToCss,
+  themeToDtcg,
+} from './lib/palette-tools.js'
 
 const POSTHOG_KEY = process.env.POSTHOG_KEY || ''
 const POSTHOG_HOST = process.env.POSTHOG_HOST || ''
@@ -2040,19 +2055,21 @@ lightenText.addEventListener('click', () => setBrightnessMode('lighten'))
 darkenText.addEventListener('click', () => setBrightnessMode('darken'))
 
 // Add event listeners for preset colors
+// A new starting point (preset, eyedropper) gets a fresh palette built around it
+function startFromColor(color) {
+  hexInput.value = color
+  colorPicker.value = color
+  updateInputColor(color)
+  resetSliders() // Reset sliders to default positions
+  updateOutputColor()
+  addToHistory(color)
+  displayColorScheme(generateDefaultPalette(color))
+  setActiveScheme(null)
+  pushUndoState()
+}
+
 document.querySelectorAll('.preset-color').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const color = btn.getAttribute('data-color')
-    hexInput.value = color
-    colorPicker.value = color
-    updateInputColor(color)
-    resetSliders() // Reset sliders to default positions
-    updateOutputColor()
-    addToHistory(color)
-    // A new starting point gets a fresh palette built around it
-    displayColorScheme(generateDefaultPalette(color))
-    pushUndoState()
-  })
+  btn.addEventListener('click', () => startFromColor(btn.getAttribute('data-color')))
 })
 
 hexInput.addEventListener('keyup', (e) => {
@@ -2136,7 +2153,7 @@ function restoreUndoState(state) {
   darkenText.setAttribute('aria-pressed', String(state.isDarken))
 
   updateOutputColor()
-  if (state.palette?.length) displayColorScheme(state.palette, state.locks)
+  if (state.palette?.length) displayColorScheme(state.palette, state.locks, { animate: false })
   else markBaseBand()
   isUndoRedoAction = false
   updateUndoRedoButtons()
@@ -2577,6 +2594,17 @@ function _getCompoundColors(hsl) {
 
 // Palette state: the bands on the stage. Locked bands survive Shuffle.
 let paletteLocks = []
+// Palette editing and contrast grid state (declared early: displayColorScheme runs at startup)
+let dragFromIndex = null
+const bandEditor = {
+  index: -1,
+  startHex: null,
+  wasBase: false,
+  frame: 0,
+  sourceHex: null,
+  sourceKey: '',
+}
+const contrastGridState = { metric: 'wcag' }
 
 // Text color for a band: same hue as the swatch, pushed to the far lightness end
 // Picks whichever tinted ink (dark or light) gives the higher WCAG ratio, so small
@@ -2598,6 +2626,9 @@ const ICON_LOCK =
   '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>'
 const ICON_UNLOCK =
   '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.9-.7"/></svg>'
+
+const ICON_EDIT =
+  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 2.5l3 3L6 13H3v-3z"/></svg>'
 
 function getPaletteHexes() {
   return Array.from(schemeColors.querySelectorAll('.history-color')).map(
@@ -2631,9 +2662,12 @@ function normalizeHex(value) {
   return `#${h}`
 }
 
-function displayColorScheme(rawColors, locks) {
+// opts.animate: false for in-place edits (reorder, recolor) so the bands do not replay
+// their entrance animation on every change
+function displayColorScheme(rawColors, locks, opts = {}) {
   const colors = rawColors.map(normalizeHex).filter(Boolean)
   paletteLocks = colors.map((_, i) => Boolean(locks?.[i]))
+  schemeColors.classList.toggle('bands--static', opts.animate === false)
   schemeColors.innerHTML = ''
   colors.forEach((hex, i) => {
     const name = getColorName(hex)
@@ -2654,6 +2688,7 @@ function displayColorScheme(rawColors, locks) {
         <div class="band__tools">
           <button type="button" class="band__tool" data-action="copy" title="Copy hex">${ICON_COPY}</button>
           <button type="button" class="band__tool" data-action="lock" title="Lock: keep on Shuffle">${paletteLocks[i] ? ICON_LOCK : ICON_UNLOCK}</button>
+          <button type="button" class="band__tool" data-action="edit" title="Edit, move or remove">${ICON_EDIT}</button>
         </div>
       </div>
       <div class="band__meta">
@@ -2670,6 +2705,11 @@ function displayColorScheme(rawColors, locks) {
     const lockTool = band.querySelector('[data-action="lock"]')
     lockTool.setAttribute('aria-pressed', String(paletteLocks[i]))
     lockTool.setAttribute('aria-label', `Lock ${name}`)
+    const editTool = band.querySelector('[data-action="edit"]')
+    editTool.setAttribute('aria-label', `Edit ${name}`)
+    editTool.setAttribute('aria-haspopup', 'dialog')
+    editTool.addEventListener('click', () => openBandEditor(i))
+    attachBandDrag(band, i)
     band.querySelector('.band__name').addEventListener('click', () => useAsBase(hex))
     band.querySelector('[data-action="copy"]').addEventListener('click', () => {
       copyToClipboard(hex, 'Copied', null)
@@ -2685,7 +2725,18 @@ function displayColorScheme(rawColors, locks) {
     })
     schemeColors.appendChild(band)
   })
+  if (colors.length < MAX_PALETTE) {
+    const add = document.createElement('button')
+    add.type = 'button'
+    add.className = 'bands__add'
+    add.setAttribute('aria-label', 'Add a color to the palette')
+    add.title = 'Add a color'
+    add.textContent = '+'
+    add.addEventListener('click', addPaletteColor)
+    schemeColors.appendChild(add)
+  }
   markBaseBand()
+  renderContrastGrid()
   window._updateContrastCheckerFg?.(currentColor.hex)
   if (currentColorblindMode !== 'normal') updateColorblindSimulation()
   if (typeof updateGradientPreview === 'function') updateGradientPreview()
@@ -3129,6 +3180,18 @@ const exportFormats = {
     type: 'text/javascript',
   },
   bootstrap: { gen: () => generateBootstrapExport(), file: '_variables.scss', type: 'text/x-scss' },
+  theme: {
+    gen: (mode) => generateThemeExport(mode),
+    file: 'theme.css',
+    type: 'text/css',
+    modes: true,
+  },
+  tokens: {
+    gen: (mode) => generateTokensExport(mode),
+    file: 'color-studio.tokens.json',
+    type: 'application/json',
+    modes: true,
+  },
 }
 
 const exportState = { format: 'css', mode: 'hex' }
@@ -4702,6 +4765,8 @@ function getColorblindHex(hex) {
 function updateColorblindSimulation() {
   const _matrix = colorblindMatrices[currentColorblindMode]
 
+  renderContrastGrid()
+
   // Update original color box
   if (currentColor?.hex) {
     const simHex = getColorblindHex(currentColor.hex)
@@ -4979,7 +5044,9 @@ function loadFromURL() {
           .map((h) => normalizeHex(h))
           .filter(Boolean)
           .slice(0, 12)
-        const lockSet = new Set((params.get('lock') || '').split('.').map(Number))
+        // filter(Boolean) first: ''.split('.') is [''], and Number('') is 0, which
+        // used to lock band 1 on every link that had no lock param
+        const lockSet = new Set((params.get('lock') || '').split('.').filter(Boolean).map(Number))
         if (hexes.length)
           displayColorScheme(
             hexes,
@@ -5326,6 +5393,15 @@ function initContrastChecker() {
     updateContrastDisplay()
   }
   window._updateContrastCheckerFg(currentColor.hex)
+
+  // Contrast grid cells load an exact pair into the checker
+  window._setContrastPair = (fg, bg) => {
+    fgInput.value = fg
+    fgPicker.value = fg
+    bgInput.value = bg
+    bgPicker.value = bg
+    updateContrastDisplay()
+  }
 }
 
 // =============================================================================
@@ -5682,6 +5758,635 @@ function registerServiceWorker() {
 }
 
 // Initialize PWA
+// =============================================================================
+// PALETTE EDITING: drag to reorder, add, edit in OKLCH, remove
+// =============================================================================
+
+// Re-render after an in-place edit and record it for Undo
+function commitPalette(colors, locks) {
+  displayColorScheme(colors, locks, { animate: false })
+  pushUndoState()
+}
+
+function addPaletteColor() {
+  const colors = getPaletteHexes()
+  if (colors.length >= MAX_PALETTE) return
+  const last = colors[colors.length - 1] || currentColor.hex
+  commitPalette([...colors, nextColorAfter(last)], [...paletteLocks, false])
+  showToast(`Added color ${colors.length + 1}`)
+}
+
+function attachBandDrag(band, index) {
+  band.draggable = true
+  band.addEventListener('dragstart', (e) => {
+    dragFromIndex = index
+    band.classList.add('is-dragging')
+    e.dataTransfer.effectAllowed = 'move'
+    // Firefox needs data set to start a drag
+    e.dataTransfer.setData('text/plain', String(index))
+  })
+  band.addEventListener('dragend', () => {
+    dragFromIndex = null
+    for (const b of schemeColors.querySelectorAll('.band')) {
+      b.classList.remove('is-dragging', 'is-drop-target')
+    }
+  })
+  band.addEventListener('dragover', (e) => {
+    if (dragFromIndex === null || dragFromIndex === index) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    band.classList.add('is-drop-target')
+  })
+  band.addEventListener('dragleave', () => band.classList.remove('is-drop-target'))
+  band.addEventListener('drop', (e) => {
+    e.preventDefault()
+    if (dragFromIndex === null || dragFromIndex === index) return
+    const from = dragFromIndex
+    commitPalette(moveItem(getPaletteHexes(), from, index), moveItem(paletteLocks, from, index))
+  })
+}
+
+function openBandEditor(index) {
+  const dialog = document.getElementById('bandEditor')
+  const hex = getPaletteHexes()[index]
+  if (!dialog || !hex) return
+  bandEditor.index = index
+  bandEditor.startHex = hex
+  bandEditor.wasBase = hex === currentColor.hex.toLowerCase()
+  setEditorFromHex(hex)
+  dialog.showModal()
+}
+
+function setEditorFromHex(hex) {
+  const o = hexToOklch(hex)
+  document.getElementById('editL').value = Math.round(o.l * 1000) / 10
+  document.getElementById('editC').value = Math.round((o.c || 0) * 1000) / 1000
+  document.getElementById('editH').value = Math.round(o.h || 0)
+  document.getElementById('editHex').value = hex
+  // Slider positions are rounded, so remember the exact hex they stand for:
+  // opening the editor and pressing Done must not nudge the color
+  bandEditor.sourceHex = hex
+  bandEditor.sourceKey = editorSliderKey()
+  renderEditor()
+}
+
+function editorSliderKey() {
+  return ['editL', 'editC', 'editH'].map((id) => document.getElementById(id).value).join('|')
+}
+
+function readEditorOklch() {
+  return {
+    l: Number(document.getElementById('editL').value) / 100,
+    c: Number(document.getElementById('editC').value),
+    h: Number(document.getElementById('editH').value),
+  }
+}
+
+// Update the editor readouts and the band itself (batched to one frame)
+function renderEditor() {
+  const { l, c, h } = readEditorOklch()
+  const g = gamutInfo(l, c, h)
+  if (editorSliderKey() === bandEditor.sourceKey) g.hex = bandEditor.sourceHex
+  const colors = getPaletteHexes()
+  const i = bandEditor.index
+  const count = colors.length
+  document.getElementById('bandEditorTitle').textContent = `Color ${String(i + 1).padStart(2, '0')}`
+  document.getElementById('editSwatch').style.backgroundColor = g.hex
+  document.getElementById('editName').textContent = getColorName(g.hex)
+  document.getElementById('editLOut').textContent = `${(l * 100).toFixed(1)}%`
+  document.getElementById('editCOut').textContent = c.toFixed(3)
+  document.getElementById('editHOut').textContent = `${Math.round(h)}°`
+  const hexInputEl = document.getElementById('editHex')
+  if (document.activeElement !== hexInputEl) hexInputEl.value = g.hex
+  const gamut = document.getElementById('editGamut')
+  gamut.textContent = g.srgb
+    ? 'Inside sRGB: shows the same on every screen.'
+    : g.p3
+      ? 'Outside sRGB, inside Display P3. Saved as the nearest sRGB color.'
+      : 'Outside Display P3 too. Saved as the nearest sRGB color.'
+  gamut.classList.toggle('is-warning', !g.srgb)
+  document.getElementById('editMoveLeft').disabled = i <= 0
+  document.getElementById('editMoveRight').disabled = i >= count - 1
+  document.getElementById('editRemove').disabled = count <= MIN_PALETTE
+
+  cancelAnimationFrame(bandEditor.frame)
+  bandEditor.frame = requestAnimationFrame(() => {
+    const next = getPaletteHexes()
+    if (next[i] === g.hex) return
+    next[i] = g.hex
+    displayColorScheme(next, paletteLocks, { animate: false })
+  })
+}
+
+// Bands are re-rendered while editing, so the button that opened the editor is
+// gone; send focus back to the same band's edit button instead of <body>
+function focusBandTool(index) {
+  const bands = schemeColors.querySelectorAll('.band')
+  const target = bands[Math.min(index, bands.length - 1)]
+  target?.querySelector('[data-action="edit"]')?.focus()
+}
+
+function closeBandEditor() {
+  const dialog = document.getElementById('bandEditor')
+  cancelAnimationFrame(bandEditor.frame)
+  const editedIndex = bandEditor.index
+  const hex = getPaletteHexes()[bandEditor.index]
+  if (dialog?.open) dialog.close()
+  if (hex && hex !== bandEditor.startHex) {
+    // Editing the base band moves the base with it, so scales and exports follow
+    if (bandEditor.wasBase) useAsBase(hex)
+    else pushUndoState()
+  }
+  bandEditor.index = -1
+  focusBandTool(editedIndex)
+}
+
+function moveEditedBand(delta) {
+  const from = bandEditor.index
+  const to = from + delta
+  const colors = getPaletteHexes()
+  if (to < 0 || to >= colors.length) return
+  displayColorScheme(moveItem(colors, from, to), moveItem(paletteLocks, from, to), {
+    animate: false,
+  })
+  pushUndoState()
+  bandEditor.index = to
+  renderEditor()
+}
+
+function removeEditedBand() {
+  const colors = getPaletteHexes()
+  if (colors.length <= MIN_PALETTE) return
+  const i = bandEditor.index
+  const removed = colors[i]
+  bandEditor.startHex = null
+  bandEditor.index = -1
+  document.getElementById('bandEditor')?.close()
+  commitPalette(
+    colors.filter((_, j) => j !== i),
+    paletteLocks.filter((_, j) => j !== i)
+  )
+  focusBandTool(i)
+  showToast(`Removed ${getColorName(removed)}`)
+}
+
+function initBandEditor() {
+  const dialog = document.getElementById('bandEditor')
+  if (!dialog) return
+  for (const id of ['editL', 'editC', 'editH']) {
+    document.getElementById(id).addEventListener('input', renderEditor)
+  }
+  document.getElementById('editHex').addEventListener('change', (e) => {
+    const hex = normalizeHex(e.target.value.trim())
+    if (hex) setEditorFromHex(hex)
+    else e.target.value = getPaletteHexes()[bandEditor.index] || ''
+  })
+  document.getElementById('editMoveLeft').addEventListener('click', () => moveEditedBand(-1))
+  document.getElementById('editMoveRight').addEventListener('click', () => moveEditedBand(1))
+  document.getElementById('editRemove').addEventListener('click', removeEditedBand)
+  document.getElementById('editDone').addEventListener('click', closeBandEditor)
+  document.getElementById('closeBandEditor').addEventListener('click', closeBandEditor)
+  // Esc and backdrop clicks also commit, so nothing typed is ever lost silently
+  dialog.addEventListener('cancel', (e) => {
+    e.preventDefault()
+    closeBandEditor()
+  })
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) closeBandEditor()
+  })
+  const pick = document.getElementById('editEyedropper')
+  if (pick && 'EyeDropper' in window) {
+    pick.hidden = false
+    pick.addEventListener('click', async () => {
+      const hex = await pickScreenColor()
+      if (hex) setEditorFromHex(hex)
+    })
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initBandEditor)
+
+// =============================================================================
+// EYEDROPPER: sample any pixel on screen (Chromium browsers only)
+// =============================================================================
+async function pickScreenColor() {
+  try {
+    const result = await new window.EyeDropper().open()
+    return normalizeHex(result.sRGBHex) || toHexFromCss(result.sRGBHex)
+  } catch {
+    // Escape or permission denied: nothing to do
+    return null
+  }
+}
+
+// EyeDropper may return 'rgb(...)' in some versions
+function toHexFromCss(value) {
+  const parsed = parsePaletteInput(value).colors
+  return parsed[0] || null
+}
+
+function initEyedropper() {
+  const btn = document.getElementById('eyedropperBtn')
+  if (!btn || !('EyeDropper' in window)) return
+  btn.hidden = false
+  btn.addEventListener('click', async () => {
+    const hex = await pickScreenColor()
+    if (!hex) return
+    startFromColor(hex)
+    showToast(`Picked ${hex}`)
+  })
+}
+
+document.addEventListener('DOMContentLoaded', initEyedropper)
+
+// =============================================================================
+// LIBRARY: saved palettes and import from pasted text
+// =============================================================================
+
+// Replace the palette and base in one step (library, import)
+function loadPalette(colors, base, locks) {
+  const list = colors.map(normalizeHex).filter(Boolean)
+  if (!list.length) return
+  const b = normalizeHex(base || '') || list[Math.floor((list.length - 1) / 2)]
+  hexInput.value = b
+  colorPicker.value = b
+  updateInputColor(b)
+  resetSliders()
+  updateOutputColor()
+  addToHistory(b)
+  displayColorScheme(list, locks)
+  setActiveScheme(null)
+  pushUndoState()
+}
+
+function getLibraryStore() {
+  try {
+    const probe = '__cs_probe__'
+    localStorage.setItem(probe, '1')
+    localStorage.removeItem(probe)
+    return localStorage
+  } catch {
+    return null
+  }
+}
+
+function importPaletteText(text) {
+  const { colors, ignored } = parsePaletteInput(text)
+  if (colors.length < MIN_PALETTE) return { ok: false, colors, ignored }
+  loadPalette(colors)
+  return { ok: true, colors, ignored }
+}
+
+function renderLibraryList() {
+  const list = document.getElementById('libraryList')
+  const empty = document.getElementById('libraryEmpty')
+  const store = getLibraryStore()
+  if (!list) return
+  const items = store ? readLibrary(store) : []
+  if (empty) {
+    empty.hidden = items.length > 0
+    if (!store) empty.textContent = 'Saving needs browser storage, which is turned off here.'
+  }
+  list.replaceChildren(
+    ...items.map((p) => {
+      const li = document.createElement('li')
+      li.className = 'library__item'
+      const strip = document.createElement('span')
+      strip.className = 'library__strip'
+      strip.setAttribute('aria-hidden', 'true')
+      for (const c of p.colors) {
+        const chip = document.createElement('span')
+        chip.style.backgroundColor = c
+        strip.append(chip)
+      }
+      const name = document.createElement('span')
+      name.className = 'library__name'
+      name.textContent = p.name
+      const meta = document.createElement('span')
+      meta.className = 'library__meta'
+      meta.textContent = `${p.colors.length} colors`
+      const load = document.createElement('button')
+      load.type = 'button'
+      load.className = 'btn btn--outline btn--sm'
+      load.textContent = 'Load'
+      load.setAttribute('aria-label', `Load ${p.name}`)
+      load.addEventListener('click', () => {
+        loadPalette(p.colors, p.base, p.locks)
+        document.getElementById('libraryDialog')?.close()
+        showToast(`Loaded ${p.name}`)
+      })
+      const del = document.createElement('button')
+      del.type = 'button'
+      del.className = 'link-btn'
+      del.textContent = 'Delete'
+      del.setAttribute('aria-label', `Delete ${p.name}`)
+      del.addEventListener('click', () => {
+        if (store) removeFromLibrary(store, p.id)
+        renderLibraryList()
+        showToast(`Deleted ${p.name}`)
+      })
+      li.append(strip, name, meta, load, del)
+      return li
+    })
+  )
+}
+
+function openLibrary() {
+  const dialog = document.getElementById('libraryDialog')
+  if (!dialog || dialog.open) return
+  const nameInput = document.getElementById('librarySaveName')
+  if (nameInput) nameInput.value = `${getColorName(currentColor.hex)} palette`
+  const status = document.getElementById('libraryImportStatus')
+  if (status) status.textContent = ''
+  renderLibraryList()
+  dialog.showModal()
+}
+
+function initLibrary() {
+  const dialog = document.getElementById('libraryDialog')
+  if (!dialog) return
+  document.getElementById('openLibrary')?.addEventListener('click', openLibrary)
+  document.getElementById('closeLibrary')?.addEventListener('click', () => dialog.close())
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close()
+  })
+
+  document.getElementById('librarySaveForm')?.addEventListener('submit', (e) => {
+    e.preventDefault()
+    const store = getLibraryStore()
+    if (!store) return
+    const nameInput = document.getElementById('librarySaveName')
+    const name = (nameInput?.value || '').trim().slice(0, 60) || 'Untitled palette'
+    saveToLibrary(store, {
+      id: `p${Date.now().toString(36)}`,
+      name,
+      colors: getPaletteHexes(),
+      locks: paletteLocks.slice(),
+      base: currentColor.hex.toLowerCase(),
+      savedAt: Date.now(),
+    })
+    renderLibraryList()
+    showToast(`Saved ${name}`)
+  })
+
+  document.getElementById('libraryImportForm')?.addEventListener('submit', (e) => {
+    e.preventDefault()
+    const text = document.getElementById('libraryImportText')?.value || ''
+    const status = document.getElementById('libraryImportStatus')
+    const result = importPaletteText(text)
+    if (!result.ok) {
+      if (status) {
+        status.textContent =
+          result.colors.length === 1
+            ? 'Found 1 color. A palette needs at least 2.'
+            : 'No colors found. Paste hex codes, CSS colors or a Coolors link.'
+      }
+      return
+    }
+    dialog.close()
+    showToast(
+      `Imported ${result.colors.length} colors${result.ignored ? `, skipped ${result.ignored}` : ''}`
+    )
+  })
+
+  // Pasting several colors into the hex field imports them as a palette
+  hexInput.addEventListener('paste', (e) => {
+    const text = e.clipboardData?.getData('text') || ''
+    const { colors } = parsePaletteInput(text)
+    if (colors.length < MIN_PALETTE) return
+    e.preventDefault()
+    importPaletteText(text)
+    showToast(`Imported ${colors.length} colors from the clipboard`)
+  })
+}
+
+document.addEventListener('DOMContentLoaded', initLibrary)
+
+// =============================================================================
+// CONTRAST GRID: every text/background pairing in the palette
+// =============================================================================
+// APCA guidance (Lc magnitude): 75 body text, 60 other text, 45 large text, 30 non-text
+function apcaGrade(lc) {
+  const v = Math.abs(lc)
+  if (v >= 75) return 'Body'
+  if (v >= 60) return 'Text'
+  if (v >= 45) return 'Large'
+  if (v >= 30) return 'UI only'
+  return 'Fail'
+}
+
+function renderContrastGrid() {
+  const table = document.getElementById('contrastGrid')
+  if (!table) return
+  const palette = getPaletteHexes()
+  const colors = [...palette]
+  for (const extra of ['#ffffff', '#000000']) if (!colors.includes(extra)) colors.push(extra)
+  const matrix = contrastMatrix(colors)
+  const apca = contrastGridState.metric === 'apca'
+  let passing = 0
+  let pairs = 0
+
+  const chip = (hex) => {
+    const wrap = document.createElement('span')
+    wrap.className = 'cgrid__chip'
+    const dot = document.createElement('span')
+    dot.className = 'cgrid__dot'
+    dot.style.backgroundColor = getColorblindHex(hex)
+    const label = document.createElement('span')
+    label.textContent = hex
+    wrap.append(dot, label)
+    return wrap
+  }
+
+  const head = document.createElement('thead')
+  const headRow = document.createElement('tr')
+  const corner = document.createElement('th')
+  corner.scope = 'col'
+  corner.className = 'cgrid__corner'
+  corner.textContent = 'Text ↓ / Background →'
+  headRow.append(corner)
+  for (const bg of colors) {
+    const th = document.createElement('th')
+    th.scope = 'col'
+    th.append(chip(bg))
+    headRow.append(th)
+  }
+  head.append(headRow)
+
+  const body = document.createElement('tbody')
+  matrix.forEach((row, r) => {
+    const tr = document.createElement('tr')
+    const th = document.createElement('th')
+    th.scope = 'row'
+    th.append(chip(colors[r]))
+    tr.append(th)
+    row.forEach((cell, c) => {
+      const td = document.createElement('td')
+      if (r === c) {
+        td.className = 'cgrid__same'
+        td.setAttribute('aria-label', 'Same color')
+        tr.append(td)
+        return
+      }
+      pairs++
+      const grade = apca ? apcaGrade(cell.apca) : cell.level
+      const pass = apca ? Math.abs(cell.apca) >= 60 : cell.ratio >= 4.5
+      if (pass) passing++
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.className = `cgrid__cell${pass ? '' : ' is-fail'}`
+      btn.style.backgroundColor = getColorblindHex(cell.bg)
+      btn.style.color = getColorblindHex(cell.fg)
+      // The "Aa" sample is drawn in CSS: it shows the pair as-is (failing pairs
+      // included), while the ratio and grade sit on a readable label
+      const sample = document.createElement('span')
+      sample.className = 'cgrid__sample'
+      sample.setAttribute('aria-hidden', 'true')
+      const label = document.createElement('span')
+      label.className = 'cgrid__label'
+      const value = document.createElement('span')
+      value.className = 'cgrid__value'
+      value.textContent = apca ? `Lc ${Math.round(Math.abs(cell.apca))}` : cell.ratio.toFixed(1)
+      const tag = document.createElement('span')
+      tag.className = 'cgrid__grade'
+      tag.textContent = grade
+      // Name = visible text + screen-reader context, so voice control matches (WCAG 2.5.3)
+      const context = document.createElement('span')
+      context.className = 'sr-only'
+      context.textContent = `: text ${cell.fg} on ${cell.bg}. Open in checker`
+      label.append(value, tag)
+      btn.append(sample, label, context)
+      btn.addEventListener('click', () => {
+        window._setContrastPair?.(cell.fg, cell.bg)
+        document.getElementById('contrastPreview')?.scrollIntoView({
+          behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'center',
+        })
+      })
+      td.append(btn)
+      tr.append(td)
+    })
+    body.append(tr)
+  })
+  table.replaceChildren(head, body)
+
+  const summary = document.getElementById('contrastGridSummary')
+  if (summary) {
+    summary.textContent = apca
+      ? `${passing} of ${pairs} pairs reach Lc 60 for text.`
+      : `${passing} of ${pairs} pairs pass AA (4.5:1) for body text.`
+  }
+}
+
+function initContrastGrid() {
+  for (const b of document.querySelectorAll('#contrastMetric .segmented__opt')) {
+    b.addEventListener('click', () => {
+      contrastGridState.metric = b.dataset.metric
+      for (const o of document.querySelectorAll('#contrastMetric .segmented__opt')) {
+        const on = o === b
+        o.classList.toggle('active', on)
+        o.setAttribute('aria-pressed', String(on))
+      }
+      renderContrastGrid()
+    })
+  }
+  renderContrastGrid()
+}
+
+document.addEventListener('DOMContentLoaded', initContrastGrid)
+
+// =============================================================================
+// SEMANTIC THEME EXPORT: palette -> light/dark UI roles
+// =============================================================================
+function getSemanticTheme() {
+  return generateSemanticTheme(getExportTokens().palette, currentColor.hex)
+}
+
+function generateThemeExport(mode = 'hex') {
+  return themeToCss(getSemanticTheme(), (hex) => formatColorValue(hex, mode))
+}
+
+function generateTokensExport(mode = 'hex') {
+  const t = getExportTokens()
+  return themeToDtcg(
+    getSemanticTheme(),
+    {
+      palette: t.palette.map((hex) => ({ hex, name: getColorName(hex) })),
+      primary: t.primary,
+      neutral: t.neutral,
+    },
+    (hex) => formatColorValue(hex, mode)
+  )
+}
+
+// Two small mock screens (light and dark) drawn with the theme roles
+function renderThemePreview(container) {
+  const theme = getSemanticTheme()
+  const card = (mode) => {
+    const r = theme[mode]
+    const el = document.createElement('div')
+    el.className = 'theme-preview__screen'
+    el.style.background = r.background
+    el.style.color = r.foreground
+    el.style.borderColor = r.border
+    const label = document.createElement('span')
+    label.className = 'theme-preview__mode'
+    label.textContent = mode === 'light' ? 'Light' : 'Dark'
+    label.style.color = r['muted-foreground']
+    const panel = document.createElement('div')
+    panel.className = 'theme-preview__card'
+    panel.style.background = r.card
+    panel.style.color = r['card-foreground']
+    panel.style.borderColor = r.border
+    const title = document.createElement('strong')
+    title.textContent = 'Weekly report'
+    const text = document.createElement('p')
+    text.textContent = 'Muted text for details.'
+    text.style.color = r['muted-foreground']
+    text.style.background = r.muted
+    const row = document.createElement('div')
+    row.className = 'theme-preview__row'
+    const primary = document.createElement('span')
+    primary.className = 'theme-preview__btn'
+    primary.textContent = 'Primary'
+    primary.style.background = r.primary
+    primary.style.color = r['primary-foreground']
+    primary.style.outline = `2px solid ${r.ring}`
+    primary.style.outlineOffset = '2px'
+    const accent = document.createElement('span')
+    accent.className = 'theme-preview__btn'
+    accent.textContent = 'Accent'
+    accent.style.background = r.accent
+    accent.style.color = r['accent-foreground']
+    row.append(primary, accent)
+    panel.append(title, text, row)
+    el.append(label, panel)
+    return el
+  }
+  container.replaceChildren(card('light'), card('dark'))
+}
+
+function initThemeExport() {
+  // Theme tabs reuse the sheet; the preview only shows for them
+  const preview = document.getElementById('exportThemePreview')
+  const update = () => {
+    if (!preview) return
+    const on = exportState.format === 'theme' || exportState.format === 'tokens'
+    preview.hidden = !on
+    if (on) renderThemePreview(preview)
+  }
+  const dialog = document.getElementById('exportDialog')
+  if (!dialog) return
+  for (const tab of dialog.querySelectorAll('.export-tabs .tab'))
+    tab.addEventListener('click', update)
+  document.getElementById('openExport')?.addEventListener('click', update)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'e' || e.key === 'E') requestAnimationFrame(update)
+  })
+}
+
+document.addEventListener('DOMContentLoaded', initThemeExport)
+
 registerServiceWorker()
 
 // Exports for testing

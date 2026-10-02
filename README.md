@@ -9,11 +9,16 @@ CSS, Tailwind, shadcn/ui and more. Runs entirely in the browser.
 
 - **Palette stage**: six harmony schemes (complementary, analogous, triadic, split,
   square, compound) plus Shuffle. Each color shows its name, hex and OKLCH value.
+- **Edit the palette**: drag bands to reorder them, add a color with the + band, and open any
+  band to tune it in OKLCH, move it, or remove it. The editor flags colors outside sRGB and
+  Display P3.
 - **Locks**: lock any palette color to keep it through Shuffle, or lock the base color.
 - **Adjust**: brightness, saturation and hue, with the original and modified color side by side.
 - **Scales**: an 11-step 50-950 ramp of the base color and a matching neutral, with contrast
   ratios against white and black. Click a step to copy it.
 - **Contrast checker**: WCAG 2 AA and AAA results, and a button that suggests a passing text color.
+- **Contrast grid**: every text and background pairing in the palette (plus white and black),
+  scored with WCAG 2 or APCA. Select a cell to load the pair into the checker.
 - **Color vision simulation**: protanopia, deuteranopia and tritanopia, applied to the palette, the adjust swatches and the previews.
 - **In use**: the palette on a dashboard card, a hero, a mobile screen and a small UI kit, with
   contrast, harmony and WCAG scores.
@@ -22,6 +27,12 @@ CSS, Tailwind, shadcn/ui and more. Runs entirely in the browser.
   The image never leaves your browser.
 - **Export**: CSS, SCSS, JSON, Tailwind v4, Tailwind v3, shadcn/ui, DaisyUI and Bootstrap, in hex
   or OKLCH. Copy the code or download the file. Also PNG and SVG swatches.
+- **Semantic theme**: the palette mapped to UI roles (background, foreground, card, muted, border,
+  primary, accent, ring) for light and dark, with every text pair at 4.5:1 or better. Export it as
+  CSS custom properties or as W3C Design Tokens JSON for Style Dictionary and Tokens Studio.
+- **Library and import**: save palettes in your browser, and import from hex codes, CSS colors or
+  a Coolors link. Pasting several colors into the hex field imports them too.
+- **Eyedropper**: pick a color from anywhere on screen (Chrome and Edge on desktop).
 - **Share**: the URL holds the base color, adjustments, full palette and locks.
 - **Undo and redo**, recent colors, light and dark themes, and reduced-motion support.
 

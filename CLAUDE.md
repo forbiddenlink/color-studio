@@ -28,7 +28,11 @@ Live at https://color-studio-mu.vercel.app.
 
 ## Layout
 
-- `index.js` - entire app logic (color math, DOM wiring, export, history), ~173K
+- `index.js` - app logic and DOM wiring (color math, export, history, palette
+  editing, library, contrast grid), ~199K
+- `lib/palette-tools.js` - pure helpers with no DOM access (import parser, APCA,
+  contrast matrix, semantic theme, DTCG output, gamut checks, library storage),
+  tested in `tests/palette-tools.test.js`. Put new pure logic here, not in index.js
 - `index.html` - app shell: masthead, palette stage, numbered chapters
   (01 Adjust, 02 Scale, 03 Contrast, 04 In use, 05 Gradient, 06 From an image),
   export `<dialog>`
@@ -60,6 +64,10 @@ Much app state lives in the DOM, not in JS objects:
   (palette hexes joined by `-`) and `lock` (locked indexes joined by `.`).
 - Set palette-derived text with `textContent`, never by interpolating into
   `innerHTML` (CodeQL flags it, and the `p` URL param is user input).
+- `displayColorScheme(colors, locks, { animate: false })` for in-place edits
+  (reorder, recolor, undo); omit the option for a new palette so bands roll in.
+- Saved palettes: localStorage key `cs-library`, validated on read by
+  `readLibrary` (bad entries are dropped).
 
 ## Gotchas
 
@@ -70,8 +78,13 @@ Much app state lives in the DOM, not in JS objects:
   exact PostHog host to `connect-src` if a key is ever set.
 - The same `connect-src 'self'` applies to `fetch()` inside the service worker.
   `service-worker.js` must ignore cross-origin requests (Google Fonts); proxying
-  them returned a 503 and gave returning visitors system fonts. Bump
-  `CACHE_NAME` whenever cached assets change.
+  them returned a 503 and gave returning visitors system fonts.
+- `index.js` and `index.css` have no content hash. The service worker is
+  network-first for all same-origin requests (cache = offline fallback only);
+  cache-first paired new HTML with old JS after a deploy. `index.html` loads them
+  with `?v=<n>` matching `CACHE_NAME`; bump both together when the worker changes.
+- No regex lookbehind (`(?<=`, `(?<!`): Babel does not transpile it and it is a
+  syntax error in Safari before 16.4, which would break the whole bundle.
 - Local screenshots and Lighthouse: use the production bundle in `dist/`, not
   `pnpm start`. The dev server live-reloads when files in the repo change.
 - The `dist/` output is produced by copying static files after `webpack
