@@ -716,6 +716,25 @@ input[type="color"]::-moz-color-swatch {
   gap: var(--s-3) var(--s-5);
 }
 
+/* Phones: scheme tabs scroll as one row instead of wrapping a single orphan */
+@media (max-width: 560px) {
+  .stage__controls {
+    width: 100%;
+  }
+  .scheme-tabs {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-right: var(--s-6);
+    /* Fade the edge so the clipped tab reads as "scroll for more" */
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+  }
+  .scheme-tabs .tab {
+    flex: none;
+  }
+}
+
 .bands {
   display: flex;
   height: clamp(320px, 52vh, 560px);

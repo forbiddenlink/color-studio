@@ -74,6 +74,10 @@ Also: contrast checker now defaults to the base color as background with the bes
 
 Per template, all criteria scored 4 or 5 after rework. Full table in `progress.md` (Template tracker). The homepage went through two scored rounds (`progress.md`, "Phase 4 rubric"): the first round had layout 3, motion 2, memorability 3, craft 2; each was fixed and rescored at 4 or above.
 
+## Pull request
+
+[#72](https://github.com/forbiddenlink/color-studio/pull/72), all checks passing. CodeQL flagged palette values reaching `innerHTML`; the bands are now built with `textContent`, and a `p=` share link carrying an `<img onerror>` payload was confirmed to render nothing. Vercel skipped the preview build (the project's Ignored Build Step), so there is no preview URL.
+
 ## Verification
 
 - `pnpm test` 71/71, `pnpm biome:check` clean, `pnpm build` compiles (3 webpack size warnings that existed before). No TypeScript, so no typecheck.
@@ -90,7 +94,7 @@ Per template, all criteria scored 4 or 5 after rework. Full table in `progress.m
 
 ## Not tested or limited
 
-- Chromium only. Not checked in Safari or Firefox, or on a real phone.
+- Smoke-tested in Playwright WebKit and Firefox (desktop 1440 and mobile 390): palette renders, Shuffle, export sheet, image extraction, fonts loaded, no horizontal overflow, 0 page errors (`xb-*.png`). Not checked on a real phone or in desktop Safari itself.
 - Dark theme was checked visually only; Lighthouse ran on the light theme.
 - Drag-and-drop of a file was not simulated; uploads were tested through the file input. The "Please drop an image file" path is old code and was not exercised.
 - DaisyUI, Bootstrap and shadcn/ui output content was not changed or reviewed for correctness, only exposed.
@@ -112,5 +116,5 @@ Copied from `needs-approval.md`. Nothing on this list was done.
 | A1 | AI palette generation | Paid model API key and a server route |
 | A2 | Synced palette library | Accounts and a database |
 | A3 | Remove PostHog analytics | Removing a feature (recommend keeping) |
-| A4 | Allow the PostHog host in the CSP `connect-src` (`vercel.json`) | Production security header; PostHog calls are likely blocked today when a key is set |
+| A4 | Allow the PostHog host in the CSP `connect-src` (`vercel.json`) | Not needed now: the live bundle has no PostHog key, so PostHog never initializes in production. Revisit only if a key is added |
 | A5 | Merge `design/upgrade` into `main` and deploy | Production change |
