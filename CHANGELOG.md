@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/forbiddenlink/color-studio/compare/v1.1.0...v1.1.1) (2026-10-12)
+
+
+### Bug Fixes
+
+* **deps:** bound overrides for shell-quote and proxy-addr ([#79](https://github.com/forbiddenlink/color-studio/issues/79)) ([b071fec](https://github.com/forbiddenlink/color-studio/commit/b071fecf1db25c7431af0e17d0151e3480052f0b))
+
 ## [1.1.0](https://github.com/forbiddenlink/color-studio/compare/v1.0.4...v1.1.0) (2026-10-09)
 
 
