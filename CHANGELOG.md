@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/forbiddenlink/color-studio/compare/v1.1.1...v1.1.2) (2026-10-17)
+
+
+### Bug Fixes
+
+* **deps:** clear transitive CVEs with bounded overrides ([#84](https://github.com/forbiddenlink/color-studio/issues/84)) ([03d84f3](https://github.com/forbiddenlink/color-studio/commit/03d84f355c017af0071d56a0293b15ed6579008d))
+
 ## [1.1.1](https://github.com/forbiddenlink/color-studio/compare/v1.1.0...v1.1.1) (2026-10-12)
 
 
