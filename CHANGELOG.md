@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/forbiddenlink/color-studio/compare/v1.1.2...v1.1.3) (2026-10-21)
+
+
+### Bug Fixes
+
+* **deps:** override launch-editor to 2.14.2 or later ([#91](https://github.com/forbiddenlink/color-studio/issues/91)) ([27d6f2c](https://github.com/forbiddenlink/color-studio/commit/27d6f2c98ef62e2b94d00572ea5193539d33a46e))
+
 ## [1.1.2](https://github.com/forbiddenlink/color-studio/compare/v1.1.1...v1.1.2) (2026-10-19)
 
 
