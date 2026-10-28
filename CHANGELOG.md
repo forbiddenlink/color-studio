@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/forbiddenlink/color-studio/compare/v1.1.3...v1.1.4) (2026-10-27)
+
+
+### Bug Fixes
+
+* **deps:** raise transitive override floors to patched versions ([#96](https://github.com/forbiddenlink/color-studio/issues/96)) ([67ac98e](https://github.com/forbiddenlink/color-studio/commit/67ac98ed12cde4bfdbe1c3371397c56be9a23eff))
+
 ## [1.1.3](https://github.com/forbiddenlink/color-studio/compare/v1.1.2...v1.1.3) (2026-10-21)
 
 
