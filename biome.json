@@ -42,6 +42,9 @@
     "includes": [
       "**",
       "!**/node_modules",
+      "!**/*.yml",
+      "!**/*.yaml",
+      "!**/*.md",
       "!**/.next",
       "!**/dist",
       "!**/build",
