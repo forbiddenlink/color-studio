@@ -8,17 +8,17 @@
   color-scheme: light;
 
   /* Paper (light) */
-  --paper: oklch(0.975 0.004 85);
-  --paper-raised: oklch(0.993 0.002 85);
-  --paper-sunk: oklch(0.95 0.005 85);
-  --ink: oklch(0.2 0.01 85);
-  --ink-soft: oklch(0.45 0.008 85);
-  --ink-faint: oklch(0.62 0.006 85);
-  --rule: oklch(0.87 0.005 85);
-  --rule-strong: oklch(0.2 0.01 85);
-  --signal: oklch(0.55 0.2 28);
-  --on-ink: oklch(0.975 0.004 85);
-  --scrim: oklch(0.2 0.01 85 / 0.35);
+  --paper: oklch(1 0 0);
+  --paper-raised: oklch(1 0 0);
+  --paper-sunk: oklch(0.965 0 0);
+  --ink: oklch(0.14 0 0);
+  --ink-soft: oklch(0.45 0 0);
+  --ink-faint: oklch(0.62 0 0);
+  --rule: oklch(0.87 0 0);
+  --rule-strong: oklch(0.2 0 0);
+  --signal: oklch(0.14 0 0);
+  --on-ink: oklch(1 0 0);
+  --scrim: oklch(0.2 0 0 / 0.35);
 
   /* Set from JS: the user's base color, used for the chip, focus ring, tab underline */
   --active: #c6d5ac;
@@ -33,7 +33,7 @@
   /* Type */
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-serif: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
 
   --step--2: 0.75rem; /* 12 */
   --step--1: 0.8125rem; /* 13 */
@@ -72,32 +72,32 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: oklch(0.17 0.004 85);
-  --paper-raised: oklch(0.21 0.004 85);
-  --paper-sunk: oklch(0.14 0.004 85);
-  --ink: oklch(0.95 0.005 85);
-  --ink-soft: oklch(0.74 0.006 85);
-  --ink-faint: oklch(0.58 0.006 85);
-  --rule: oklch(0.32 0.005 85);
-  --rule-strong: oklch(0.95 0.005 85);
-  --signal: oklch(0.72 0.17 28);
-  --on-ink: oklch(0.17 0.004 85);
+  --paper: oklch(0.17 0 0);
+  --paper-raised: oklch(0.21 0 0);
+  --paper-sunk: oklch(0.14 0 0);
+  --ink: oklch(0.95 0 0);
+  --ink-soft: oklch(0.74 0 0);
+  --ink-faint: oklch(0.58 0 0);
+  --rule: oklch(0.32 0 0);
+  --rule-strong: oklch(0.95 0 0);
+  --signal: oklch(0.95 0 0);
+  --on-ink: oklch(0.17 0 0);
   --scrim: oklch(0 0 0 / 0.55);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: oklch(0.17 0.004 85);
-    --paper-raised: oklch(0.21 0.004 85);
-    --paper-sunk: oklch(0.14 0.004 85);
-    --ink: oklch(0.95 0.005 85);
-    --ink-soft: oklch(0.74 0.006 85);
-    --ink-faint: oklch(0.58 0.006 85);
-    --rule: oklch(0.32 0.005 85);
-    --rule-strong: oklch(0.95 0.005 85);
-    --signal: oklch(0.72 0.17 28);
-    --on-ink: oklch(0.17 0.004 85);
+    --paper: oklch(0.17 0 0);
+    --paper-raised: oklch(0.21 0 0);
+    --paper-sunk: oklch(0.14 0 0);
+    --ink: oklch(0.95 0 0);
+    --ink-soft: oklch(0.74 0 0);
+    --ink-faint: oklch(0.58 0 0);
+    --rule: oklch(0.32 0 0);
+    --rule-strong: oklch(0.95 0 0);
+    --signal: oklch(0.95 0 0);
+    --on-ink: oklch(0.17 0 0);
     --scrim: oklch(0 0 0 / 0.55);
   }
 }
@@ -227,10 +227,26 @@ a:hover {
 
 /* 3. Type primitives ------------------------------------------------------- */
 em {
+  font-style: normal;
+}
+
+/* Display face: Archivo, narrow and heavy. Names, ratios and titles all share it. */
+.wordmark,
+.stage__title,
+.band__name,
+.chapter__title,
+.specimen__name,
+.contrast-ratio-value,
+.cgrid__sample::before,
+.mock-hero-headline,
+.preview-header,
+.editor__name,
+.sheet__title {
   font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: 0;
+  font-variation-settings: "wdth" 70;
+  font-stretch: 70%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .label {
@@ -581,9 +597,10 @@ input[type="color"]::-moz-color-swatch {
   white-space: nowrap;
 }
 
-.wordmark em {
-  font-size: 1.2em;
-  margin-left: -0.08em;
+.wordmark {
+  font-family: var(--font-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .wordmark__chip {
@@ -682,9 +699,16 @@ input[type="color"]::-moz-color-swatch {
 
 /* 6. Stage (palette bands) ------------------------------------------------ */
 .stage {
+  padding: var(--s-6) 0 var(--s-5);
+}
+
+.stage__bar,
+.stage__foot {
   max-width: var(--max);
-  margin: 0 auto;
-  padding: var(--s-6) var(--gutter) var(--s-5);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
 }
 
 .stage__bar {
@@ -697,16 +721,13 @@ input[type="color"]::-moz-color-swatch {
 }
 
 .stage__title {
-  font-size: var(--step-7);
-  font-weight: 500;
-  line-height: 0.98;
-  letter-spacing: -0.035em;
-  max-width: 13ch;
-}
-
-.stage__title em {
-  font-size: 1.08em;
-  letter-spacing: -0.01em;
+  flex: 1 1 100%;
+  font-size: clamp(3.4rem, 9.6vw, 10rem);
+  line-height: 0.9;
+  word-spacing: 0.1em;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .stage__controls {
@@ -737,10 +758,10 @@ input[type="color"]::-moz-color-swatch {
 
 .bands {
   display: flex;
-  height: clamp(320px, 52vh, 560px);
-  border-radius: var(--r-md);
+  height: clamp(380px, 50vh, 620px);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 0 0 1px color-mix(in oklch, var(--ink) 10%, transparent);
+  border-block: 1px solid var(--ink);
   background: var(--paper-sunk);
 }
 
@@ -830,8 +851,9 @@ input[type="color"]::-moz-color-swatch {
 .band__name {
   justify-self: start;
   font-family: var(--font-serif);
-  font-size: clamp(1.5rem, 2.4vw, 2.25rem);
-  line-height: 1.05;
+  font-size: clamp(1.6rem, 3vw, 2.9rem);
+  line-height: 0.95;
+  text-transform: uppercase;
   text-align: left;
   color: inherit;
   overflow-wrap: anywhere;
@@ -1030,13 +1052,8 @@ input[type="color"]::-moz-color-swatch {
 .chapter__title {
   font-family: var(--font-serif);
   font-size: var(--step-6);
-  font-weight: 400;
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-
-.chapter__title em {
-  font-style: italic;
+  line-height: 0.95;
+  text-transform: uppercase;
 }
 
 .chapter__lede {
