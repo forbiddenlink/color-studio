@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/forbiddenlink/color-studio/compare/v1.1.4...v1.2.0) (2026-11-04)
+
+
+### Features
+
+* **ui:** neutral ink-on-white chrome with a full-bleed live palette hero ([#102](https://github.com/forbiddenlink/color-studio/issues/102)) ([ed8a17f](https://github.com/forbiddenlink/color-studio/commit/ed8a17f9a23bf0898387e4c00fee8ca5f6e7d458))
+
 ## [1.1.4](https://github.com/forbiddenlink/color-studio/compare/v1.1.3...v1.1.4) (2026-10-27)
 
 
