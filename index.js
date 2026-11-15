@@ -6058,10 +6058,23 @@ function renderLibraryList() {
   const empty = document.getElementById('libraryEmpty')
   const store = getLibraryStore()
   if (!list) return
-  const items = store ? readLibrary(store) : []
+  let items
+  try {
+    if (!store) throw new Error('Storage unavailable')
+    items = readLibrary(store, { strict: true })
+  } catch {
+    if (empty) {
+      empty.hidden = false
+      empty.setAttribute('role', 'status')
+      empty.textContent =
+        'Could not refresh saved palettes. Previously shown items may be out of date. Close and reopen the library to retry.'
+    }
+    return
+  }
   if (empty) {
+    empty.setAttribute('role', 'status')
     empty.hidden = items.length > 0
-    if (!store) empty.textContent = 'Saving needs browser storage, which is turned off here.'
+    empty.textContent = 'Nothing saved yet.'
   }
   list.replaceChildren(
     ...items.map((p) => {
@@ -6097,7 +6110,13 @@ function renderLibraryList() {
       del.textContent = 'Delete'
       del.setAttribute('aria-label', `Delete ${p.name}`)
       del.addEventListener('click', () => {
-        if (store) removeFromLibrary(store, p.id)
+        try {
+          if (!store) throw new Error('Storage unavailable')
+          removeFromLibrary(store, p.id)
+        } catch {
+          showToast('Could not delete: library is unreadable or browser storage is full or blocked')
+          return
+        }
         renderLibraryList()
         showToast(`Deleted ${p.name}`)
       })
@@ -6130,7 +6149,10 @@ function initLibrary() {
   document.getElementById('librarySaveForm')?.addEventListener('submit', (e) => {
     e.preventDefault()
     const store = getLibraryStore()
-    if (!store) return
+    if (!store) {
+      showToast('Could not save: browser storage is unavailable. Your palette has not been saved.')
+      return
+    }
     const nameInput = document.getElementById('librarySaveName')
     const name = (nameInput?.value || '').trim().slice(0, 60) || 'Untitled palette'
     try {
@@ -6144,7 +6166,7 @@ function initLibrary() {
       })
     } catch {
       // Quota exceeded or storage blocked mid-session
-      showToast('Could not save: browser storage is full or blocked')
+      showToast('Could not save: library is unreadable or browser storage is full or blocked')
       return
     }
     renderLibraryList()
