@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/forbiddenlink/color-studio/compare/v1.2.0...v1.2.1) (2026-11-15)
+
+
+### Bug Fixes
+
+* **library:** never overwrite an unreadable saved-palette library ([#108](https://github.com/forbiddenlink/color-studio/issues/108)) ([8810bd0](https://github.com/forbiddenlink/color-studio/commit/8810bd01b0273de54f8089aac6bee691b3b797b6))
+
 ## [1.2.0](https://github.com/forbiddenlink/color-studio/compare/v1.1.4...v1.2.0) (2026-11-04)
 
 
