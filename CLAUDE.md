@@ -24,7 +24,7 @@ Live at https://color-studio-mu.vercel.app.
 - `pnpm test` / `pnpm test:watch` - vitest
 - `pnpm check` - biome check + test + build
 - `pnpm biome:check` / `pnpm biome:fix` / `pnpm biome:format`
-- `pnpm audit` / `pnpm security` - `pnpm audit --audit-level high`
+- `pnpm run audit` / `pnpm run security` - `pnpm audit --audit-level high` (bare `pnpm audit` runs pnpm's built-in audit without the severity flag)
 
 ## Layout
 
