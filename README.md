@@ -48,7 +48,7 @@ CSS, Tailwind, shadcn/ui and more. Runs entirely in the browser.
 
 ## Getting started
 
-Prerequisites: Node.js 18+ and pnpm.
+Prerequisites: Node.js 22.18 or newer (`@babel/core` 8 requires `^22.18.0 || >=24.11.0`; CI runs Node 22) and pnpm. The repo does not pin a version.
 
 ```bash
 git clone https://github.com/forbiddenlink/color-studio.git
@@ -66,7 +66,7 @@ pnpm test         # vitest
 pnpm test:watch
 pnpm check        # biome check + test + build
 pnpm biome:check / pnpm biome:fix / pnpm biome:format
-pnpm audit / pnpm security   # pnpm audit --audit-level high
+pnpm run audit / pnpm run security   # pnpm audit --audit-level high
 ```
 
 `pnpm build` alone does not copy the static files (favicon, manifest, service worker). The
