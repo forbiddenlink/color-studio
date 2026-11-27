@@ -1466,6 +1466,8 @@ input[type="color"]::-moz-color-swatch {
 /* Contrast grid */
 .cgrid-section {
   display: grid;
+  /* minmax(0, 1fr): a bare grid track sizes to the 920px table and pushes the page wide */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s-3);
   margin-top: var(--s-6);
 }
@@ -1479,6 +1481,11 @@ input[type="color"]::-moz-color-swatch {
 }
 
 .cgrid-scroll {
+  /* Containing block for the absolutely positioned .sr-only text in each cell; without
+     it that text ignores this scroller's clip and widens the whole page */
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--rule);
   border-radius: var(--r-md);
