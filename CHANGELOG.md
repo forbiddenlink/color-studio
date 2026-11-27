@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/forbiddenlink/color-studio/compare/v1.2.1...v1.2.2) (2026-11-27)
+
+
+### Bug Fixes
+
+* phone overflow, Apply not regenerating palette, empty img ([#120](https://github.com/forbiddenlink/color-studio/issues/120)) ([95aa7fe](https://github.com/forbiddenlink/color-studio/commit/95aa7fe664ec221c64a0c337206697a0b9b1dffc))
+
 ## [1.2.1](https://github.com/forbiddenlink/color-studio/compare/v1.2.0...v1.2.1) (2026-11-15)
 
 
