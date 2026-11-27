@@ -7,6 +7,7 @@ import {
   contrastMatrix,
   gamutInfo,
   generateSemanticTheme,
+  keepLockedBands,
   MAX_PALETTE,
   MIN_PALETTE,
   moveItem,
@@ -2195,8 +2196,17 @@ function applyColor() {
   updateInputColor(normalized)
   updateOutputColor()
   addToHistory(normalized)
+  // Rebuild the bands around the new base. Without this the hex, URL color= and
+  // preview dot changed but the bands (and p= in the URL) kept the old palette.
+  // Keep the current size and any locked bands, like Shuffle does.
+  const previous = getPaletteHexes()
+  const fitted = resizePalette(generateDefaultPalette(normalized), previous.length || 5, 2)
+  const locks = fitted.colors.map((_, i) => Boolean(paletteLocks[i]))
+  displayColorScheme(keepLockedBands(fitted.colors, previous, locks), locks)
+  setActiveScheme(null)
   markBaseBand()
   pushUndoState()
+  updateURL()
 }
 
 // Inline, screen-reader-announced validation for the hex field
@@ -4440,7 +4450,14 @@ function processImageFile(file) {
   reader.onload = (e) => {
     const img = new Image()
     img.onload = () => {
-      const thumb = document.getElementById('imageThumb')
+      // Created on first upload: a static <img> with no src sits in the DOM as an empty image
+      let thumb = document.getElementById('imageThumb')
+      if (!thumb) {
+        thumb = document.createElement('img')
+        thumb.id = 'imageThumb'
+        thumb.className = 'image-thumb'
+        document.getElementById('imageInput')?.after(thumb)
+      }
       if (thumb) {
         thumb.src = img.src
         thumb.alt = `Uploaded image: ${file.name}`
@@ -6438,12 +6455,15 @@ export {
   alterChromaOklch,
   alterHueOklch,
   alterLightnessOklch,
+  applyColor,
   applyColorblindTransform,
   calculateContrastRatio,
   calculateLuminance,
   convertHexToRGB,
   convertRGBToHex,
+  displayColorScheme,
   formatOklchString,
+  generateDefaultPalette,
   generateDerivedColor,
   generateHarmoniousPalette,
   getAnalogousColorsOklch,
@@ -6451,6 +6471,7 @@ export {
   getComplementaryColorOklch,
   getCompoundColorsOklch,
   getContrastColor,
+  getPaletteHexes,
   getReadableTextColor,
   getSplitComplementaryColorsOklch,
   getSquareColorsOklch,
